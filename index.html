@@ -66,42 +66,64 @@
   <div id="signalBox"></div>
 
   <iframe id="tvChart" src="https://www.tradingview.com/embed-widget/advanced-chart/?symbol=OANDA:XAUUSD&theme=dark" width="100%" height="500" frameborder="0" allowfullscreen></iframe>
+<script>
+  const pairSelect = document.getElementById("pairSelect");
+  const tvChart = document.getElementById("tvChart");
+  const signalBox = document.getElementById("signalBox");
+  const timeDisplay = document.getElementById("timeDisplay");
 
-  <script>
-    const pairSelect = document.getElementById("pairSelect");
-    const tvChart = document.getElementById("tvChart");
-    const signalBox = document.getElementById("signalBox");
-    const timeDisplay = document.getElementById("timeDisplay");
+  pairSelect.addEventListener("change", function () {
+    const symbol = this.value;
+    const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
+    tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
+  });
 
-    pairSelect.addEventListener("change", function () {
-      const symbol = this.value;
-      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
-      tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
-    });
+  async function generateSignal() {
+    const now = new Date();
+    const day = now.getDay();
+    const pair = pairSelect.value;
+    const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
-    function generateSignal() {
-      const now = new Date();
-      const day = now.getDay();
-      const pair = pairSelect.value;
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+    // Check if Gold market is closed (Saturday or Sunday)
+    if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+      signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+      return;
+    }
 
-      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+    try {
+      const res = await fetch('https://ts-angel-forex-production.up.railway.app/signal');
+      const data = await res.json();
+
+      if (data.pair !== pair) {
+        signalBox.innerHTML = `❗No signal available for <b>${pair}</b> right now.`;
         return;
       }
 
-      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
-      signalBox.innerHTML = `📈 Signal for <b>${pair}</b>: <span style='color:yellow'>${direction}</span> at <span style='color:#ffcc00'>${time}</span>`;
+      signalBox.innerHTML = `
+        📉 <b>${data.pair}</b> Signal: 
+        <span style='color:yellow'>${data.direction}</span><br/>
+        🎯 Entry: <b>${data.entry}</b><br/>
+        🥇 TP1: <b>${data.tp1}</b><br/>
+        🥈 TP2: <b>${data.tp2}</b><br/>
+        🛑 SL: <b>${data.sl}</b><br/>
+        🕒 Time: ${data.time}
+      `;
+    } catch (err) {
+      signalBox.innerHTML = `⚠️ Error fetching signal. Check internet or server.`;
+      console.error(err);
     }
+  }
 
-    function updateTime() {
-      const now = new Date();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-      timeDisplay.textContent = `Current Indian Time: ${time}`;
-    }
+  function updateTime() {
+    const now = new Date();
+    const time = now.toLocaleTimeString("en-IN", { hour12: true });
+    timeDisplay.textContent = `Current Indian Time: ${time}`;
+  }
 
-    setInterval(updateTime, 1000);
-    updateTime();
-  </script>
+  setInterval(updateTime, 1000);
+  updateTime();
+</script>
+
+ 
 </body>
 </html>
