@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TS Angel – Forex Signal Panel</title>
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    select, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      width: 90%;
+      max-width: 400px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #0056b3;
+      cursor: pointer;
+    }
+    iframe {
+      margin-top: 20px;
+      border-radius: 12px;
+    }
+    .time-display {
+      margin-top: 15px;
+      font-size: 18px;
+      color: #ffcc00;
+    }
+    #signalBox {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #00ff7f;
+      background-color: #1c1c1c;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #00ff7f66;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>TS Angel – Forex Signal Panel</h2>
+  <label for="pairSelect">Select Pair:</label>
+  <select id="pairSelect">
+    <option value="XAUUSD">XAUUSD (Gold)</option>
+    <option value="BTCUSD">BTCUSD (Bitcoin)</option>
+  </select>
+
+  <div class="time-display" id="timeDisplay"></div>
+  <button onclick="generateSignal()">🔮 Generate Signal</button>
+  <div id="signalBox"></div>
+
+  <iframe id="tvChart" src="https://www.tradingview.com/embed-widget/advanced-chart/?symbol=OANDA:XAUUSD&theme=dark" width="100%" height="500" frameborder="0" allowfullscreen></iframe>
+
+  <script>
+    const pairSelect = document.getElementById("pairSelect");
+    const tvChart = document.getElementById("tvChart");
+    const signalBox = document.getElementById("signalBox");
+    const timeDisplay = document.getElementById("timeDisplay");
+
+    pairSelect.addEventListener("change", function () {
+      const symbol = this.value;
+      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
+      tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
+    });
+
+    function generateSignal() {
+      const now = new Date();
+      const day = now.getDay();
+      const pair = pairSelect.value;
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+
+      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+        return;
+      }
+
+      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      signalBox.innerHTML = `📈 Signal for <b>${pair}</b>: <span style='color:yellow'>${direction}</span> at <span style='color:#ffcc00'>${time}</span>`;
+    }
+
+    function updateTime() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+      timeDisplay.textContent = `Current Indian Time: ${time}`;
+    }
+
+    setInterval(updateTime, 1000);
+    updateTime();
+  </script>
+</body>
+</html>
