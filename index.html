@@ -65,32 +65,35 @@
   <button onclick="generateSignal()">🔮 Generate Signal</button>
   <div id="signalBox"></div>
 
-  <!-- Chart Container -->
-<!-- Binance BTCUSD Live Chart -->
+ <!-- Chart Container -->
 <div id="liveChart" style="width: 100%; height: 400px; margin-top: 20px;"></div>
+
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <script>
-  const chart = LightweightCharts.createChart(document.getElementById('liveChart'), {
+  const chart = LightweightCharts.createChart(document.getElementById("liveChart"), {
     width: window.innerWidth - 100,
     height: 400,
     layout: {
-      backgroundColor: '#0d0d0d',
-      textColor: '#FFFFFF'
+      backgroundColor: "#0d0d0d",
+      textColor: "#f1f1f1"
     },
     grid: {
-      vertLines: { color: '#1e1e1e' },
-      horzLines: { color: '#1e1e1e' }
+      vertLines: { color: "#1e1e1e" },
+      horLines: { color: "#1e1e1e" }
     },
-    priceScale: { borderColor: '#71649C' },
-    timeScale: { borderColor: '#71649C', timeVisible: true },
+    priceScale: { borderColor: "#71649C" },
+    timeScale: { borderColor: "#71649C", timeVisible: true }
   });
 
   const candleSeries = chart.addCandlestickSeries();
 
-  const socket = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@kline_1m');
+  // WebSocket Live BTC Candle Fetch
+  const socket = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@kline_1m");
+
   socket.onmessage = function (event) {
-    const data = JSON.parse(event.data);
-    const candlestick = data.k;
+    const message = JSON.parse(event.data);
+    const candlestick = message.k;
+
     candleSeries.update({
       time: candlestick.t / 1000,
       open: parseFloat(candlestick.o),
@@ -100,6 +103,7 @@
     });
   };
 </script>
+
   
   <script>
   const pairSelect = document.getElementById("pairSelect");
