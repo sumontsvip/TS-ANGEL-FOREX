@@ -66,16 +66,26 @@
   <div id="signalBox"></div>
 
   <iframe id="tvChart" src="https://www.tradingview.com/embed-widget/advanced-chart/?symbol=OANDA:XAUUSD&theme=dark" width="100%" height="500" frameborder="0" allowfullscreen></iframe>
+pdateTime();
 <script>
   const pairSelect = document.getElementById("pairSelect");
   const tvChart = document.getElementById("tvChart");
   const signalBox = document.getElementById("signalBox");
   const timeDisplay = document.getElementById("timeDisplay");
 
-  pairSelect.addEventListener("change", function () {
-    const symbol = this.value;
-    const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
-    tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
+  const chartMap = {
+    BTCUSD: "BINANCE:BTCUSD",
+    XAUUSD: "OANDA:XAUUSD"
+  };
+
+  function updateChart() {
+    const symbol = pairSelect.value;
+    const tvSymbol = chartMap[symbol];
+    tvChart.src = `https://s.tradingview.com/widgetembed/?symbol=${tvSymbol}&interval=1&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&hideideas=1&studies=[]`;
+  }
+
+  pairSelect.addEventListener("change", () => {
+    updateChart();
   });
 
   async function generateSignal() {
@@ -84,46 +94,52 @@
     const pair = pairSelect.value;
     const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
-    // Check if Gold market is closed (Saturday or Sunday)
-    if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+    if (pair === "XAUUSD" && (day === 6 || day === 0)) {
       signalBox.innerHTML = `⚠️ Gold market is closed today.`;
       return;
     }
 
-    try {
-      const res = await fetch('https://ts-angel-forex-production.up.railway.app/signal');
-      const data = await res.json();
+    let price;
 
-      if (data.pair !== pair) {
-        signalBox.innerHTML = `❗No signal available for <b>${pair}</b> right now.`;
-        return;
+    try {
+      if (pair === "BTCUSD") {
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+        price = res.ok ? (await res.json()).bitcoin.usd : null;
+      } else {
+        const res = await fetch("https://metals-api.com/api/latest?access_key=YOUR_API_KEY&base=USD&symbols=XAU");
+        const data = await res.json();
+        price = data.rates.XAU;
       }
 
+      if (!price) throw new Error("Price fetch failed");
+
+      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      const entry = price.toFixed(2);
+      const tp1 = (price + 50).toFixed(2);
+      const tp2 = (price + 100).toFixed(2);
+      const sl = (price - 70).toFixed(2);
+
       signalBox.innerHTML = `
-        📉 <b>${data.pair}</b> Signal: 
-        <span style='color:yellow'>${data.direction}</span><br/>
-        🎯 Entry: <b>${data.entry}</b><br/>
-        🥇 TP1: <b>${data.tp1}</b><br/>
-        🥈 TP2: <b>${data.tp2}</b><br/>
-        🛑 SL: <b>${data.sl}</b><br/>
-        🕒 Time: ${data.time}
+        📉 <b>${pair}</b>: <span style='color:yellow'>${direction}</span><br/>
+        🟡 Entry: ${entry} <br/>
+        🎯 TP1: ${tp1} | TP2: ${tp2}<br/>
+        🛑 SL: ${sl}<br/>
+        ⏰ Time: ${time}
       `;
-    } catch (err) {
-      signalBox.innerHTML = `⚠️ Error fetching signal. Check internet or server.`;
-      console.error(err);
+    } catch (e) {
+      signalBox.innerHTML = "⚠️ Error fetching live price.";
     }
   }
 
   function updateTime() {
     const now = new Date();
-    const time = now.toLocaleTimeString("en-IN", { hour12: true });
-    timeDisplay.textContent = `Current Indian Time: ${time}`;
+    timeDisplay.innerText = "Current Indian Time: " + now.toLocaleTimeString("en-IN", { hour12: true });
   }
 
   setInterval(updateTime, 1000);
   updateTime();
+  updateChart(); // load default chart
 </script>
 
- 
 </body>
 </html>
