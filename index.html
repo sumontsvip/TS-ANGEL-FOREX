@@ -67,42 +67,7 @@
 
   <iframe id="tvChart" src="https://www.tradingview.com/embed-widget/advanced-chart/?symbol=OANDA:XAUUSD&theme=dark" width="100%" height="500" frameborder="0" allowfullscreen></iframe>
 pdateTime();
-<script>
-  const pairSelect = document.getElementById("pairSelect");
-  const tvChart = document.getElementById("tvChart");
-  const signalBox = document.getElementById("signalBox");
-  const timeDisplay = document.getElementById("timeDisplay");
-
-  const chartMap = {
-    BTCUSD: "BINANCE:BTCUSD",
-    XAUUSD: "OANDA:XAUUSD"
-  };
-
-  function updateChart() {
-    const symbol = pairSelect.value;
-    const tvSymbol = chartMap[symbol];
-    tvChart.src = `https://s.tradingview.com/widgetembed/?symbol=${tvSymbol}&interval=1&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&hideideas=1&studies=[]`;
-  }
-
-  pairSelect.addEventListener("change", () => {
-    updateChart();
-  });
-
-  async function generateSignal() {
-    const now = new Date();
-    const day = now.getDay();
-    const pair = pairSelect.value;
-    const time = now.toLocaleTimeString("en-IN", { hour12: true });
-
-    if (pair === "XAUUSD" && (day === 6 || day === 0)) {
-      signalBox.innerHTML = `⚠️ Gold market is closed today.`;
-      return;
-    }
-
-    let price;
-
-    try {
-<script>
+  <script>
   const pairSelect = document.getElementById("pairSelect");
   const tvChart = document.getElementById("tvChart");
   const signalBox = document.getElementById("signalBox");
