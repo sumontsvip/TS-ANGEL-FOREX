@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TS Angel – Forex Signal Panel</title>
+  <title>TS Angel – Forex Signal </title>
   <style>
     body {
       background-color: #0f0f0f;
@@ -54,7 +54,7 @@
   </style>
 </head>
 <body>
-  <h2>TS Angel – Forex Signal Panel</h2>
+  <h2>TS Angel – Forex Signal </h2>
   <label for="pairSelect">Select Pair:</label>
   <select id="pairSelect">
     <option value="XAUUSD">XAUUSD (Gold)</option>
@@ -102,36 +102,64 @@ pdateTime();
     let price;
 
     try {
-if (pair === "BTCUSD") {
-  const candleUrl = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=2";
+<script>
+  const pairSelect = document.getElementById("pairSelect");
+  const tvChart = document.getElementById("tvChart");
+  const signalBox = document.getElementById("signalBox");
+  const timeDisplay = document.getElementById("timeDisplay");
 
-  fetch(candleUrl)
-    .then(res => res.json())
-    .then(data => {
-      const lastCandle = data[0]; // [Open Time, Open, High, Low, Close, ...]
-      const open = parseFloat(lastCandle[1]);
-      const close = parseFloat(lastCandle[4]);
+  pairSelect.addEventListener("change", function () {
+    const symbol = this.value;
+    const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
+    tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
+  });
 
-      const direction = close > open ? "BUY" : "SELL";
-      const price = close;
+  function generateSignal() {
+    const pair = pairSelect.value;
+    const now = new Date();
+    const day = now.getDay();
+    const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
-      const entry = price.toFixed(2);
-      const tp1 = direction === "BUY" ? (price + 50).toFixed(2) : (price - 50).toFixed(2);
-      const tp2 = direction === "BUY" ? (price + 100).toFixed(2) : (price - 100).toFixed(2);
-      const sl = direction === "BUY" ? (price - 70).toFixed(2) : (price + 70).toFixed(2);
+    if (pair === "XAUUSD") {
+      if (day === 6 || day === 0) {
+        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+        return;
+      }
+      signalBox.innerHTML = `⚙️ Gold logic is under development.`;
+      return;
+    }
 
-      signalBox.innerHTML = `
-        <b>📉 ${pair}:</b> <span style='color:yellow'>${direction}</span><br>
-        🟡 Entry: ${entry}<br>
-        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-        🛑 SL: ${sl}<br>
-        ⏰ Time: ${time}
-      `;
-    })
-    .catch(err => {
-      signalBox.innerHTML = `❌ Failed to fetch live candle`;
-    });
-}
+    if (pair === "BTCUSD") {
+      const candleUrl = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=2";
+
+      fetch(candleUrl)
+        .then(res => res.json())
+        .then(data => {
+          const lastCandle = data[0];
+          const open = parseFloat(lastCandle[1]);
+          const close = parseFloat(lastCandle[4]);
+
+          const direction = close > open ? "BUY" : "SELL";
+          const price = close;
+
+          const entry = price.toFixed(2);
+          const tp1 = direction === "BUY" ? (price + 50).toFixed(2) : (price - 50).toFixed(2);
+          const tp2 = direction === "BUY" ? (price + 100).toFixed(2) : (price - 100).toFixed(2);
+          const sl = direction === "BUY" ? (price - 70).toFixed(2) : (price + 70).toFixed(2);
+
+          signalBox.innerHTML = `
+            <b>📊 ${pair}:</b> <span style='color:yellow'>${direction}</span><br>
+            🟡 Entry: ${entry}<br>
+            🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+            🛑 SL: ${sl}<br>
+            ⏰ Time: ${time}
+          `;
+        })
+        .catch(err => {
+          signalBox.innerHTML = `❌ Failed to fetch live candle`;
+        });
+    }
+  }
 
   function updateTime() {
     const now = new Date();
@@ -140,7 +168,6 @@ if (pair === "BTCUSD") {
 
   setInterval(updateTime, 1000);
   updateTime();
-  updateChart(); // load default chart
 </script>
 
 </body>
