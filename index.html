@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -33,90 +34,108 @@
 </head>
 <body>
   <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
-  <p id="timeDisplay">⏰ Current Indian Time: </p>  <select id="pairSelect">
+  <p id="timeDisplay">⏰ Current Indian Time: </p>
+
+  <select id="pairSelect">
     <option value="BTCUSD">BTCUSD</option>
     <option value="XAUUSD">XAUUSD</option>
-  </select><button onclick="generateSignal()">📡 Generate Signal</button>
+  </select>
 
-  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  <iframe id="tvChart"></iframe>  <script>
+  <button onclick="generateSignal()">📡 Generate Signal</button>
+  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
+
+  <iframe id="tvChart"></iframe>
+
+  <script>
     const pairSelect = document.getElementById("pairSelect");
     const tvChart = document.getElementById("tvChart");
     const signalBox = document.getElementById("signalBox");
     const timeDisplay = document.getElementById("timeDisplay");
-
     let activeSignal = null;
 
-    pairSelect.addEventListener("change", function () {
-      loadChart();
-    });
+    pairSelect.addEventListener("change", loadChart);
 
     function loadChart() {
       const symbol = pairSelect.value;
-      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
+      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD";
       tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
     }
 
-    function detectTradeMode(price) {
-      if (price < 50000) return "Scalping";
-      else if (price < 100000) return "Intraday";
-      else return "Swing";
+    async function fetchLivePrice(pair) {
+      try {
+        if (pair === "BTCUSD") {
+          const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+          const data = await res.json();
+          return parseFloat(data.price);
+        } else {
+          const res = await fetch("https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&apikey=cd96961a49e242fe939a80866e70c57d&outputsize=1");
+          const data = await res.json();
+          return parseFloat(data.values[0].close);
+        }
+      } catch (error) {
+        signalBox.innerHTML = "❌ Error fetching live price!";
+        console.error(error);
+        return null;
+      }
     }
 
-    function generateSignal() {
+    async function generateSignal() {
       const now = new Date();
       const pair = pairSelect.value;
       const day = now.getDay();
       const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
       if (activeSignal) {
-        signalBox.innerHTML = `⏳ Wait: A signal is already active!`;
+        signalBox.innerHTML = "⏳ Wait: A signal is already active!";
         return;
       }
 
       if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+        signalBox.innerHTML = "⚠️ Gold market is closed today.";
         return;
       }
 
-      const price = parseFloat((Math.random() * 1000 + 100000).toFixed(2));
+      const price = await fetchLivePrice(pair);
+      if (!price) return;
+
       const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      const entry = parseFloat(price.toFixed(2));
+      const sl = direction === "BUY" ? (entry - 70).toFixed(2) : (entry + 70).toFixed(2);
+      const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
+      const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
 
-      const mode = detectTradeMode(price);
-      let entry = price, sl, tp1, tp2;
-
-      if (mode === "Scalping") {
-        sl = direction === "BUY" ? entry - 30 : entry + 30;
-        tp1 = direction === "BUY" ? entry + 30 : entry - 30;
-        tp2 = null;
-      } else if (mode === "Intraday") {
-        sl = direction === "BUY" ? entry - 70 : entry + 70;
-        tp1 = direction === "BUY" ? entry + 60 : entry - 60;
-        tp2 = direction === "BUY" ? entry + 100 : entry - 100;
-      } else {
-        sl = direction === "BUY" ? entry - 120 : entry + 120;
-        tp1 = direction === "BUY" ? entry + 100 : entry - 100;
-        tp2 = direction === "BUY" ? entry + 200 : entry - 200;
+      // 📌 Mode detection logic
+      let mode = "Scalping";
+      if (pair === "XAUUSD") {
+        if (entry < 2200) mode = "Scalping";
+        else if (entry < 2500) mode = "Intraday";
+        else mode = "Swing";
+      } else if (pair === "BTCUSD") {
+        if (entry < 30000) mode = "Scalping";
+        else if (entry < 50000) mode = "Intraday";
+        else mode = "Swing";
       }
 
       activeSignal = {
         pair,
         direction,
-        entry: entry.toFixed(2),
-        sl: sl.toFixed(2),
-        tp1: tp1.toFixed(2),
-        tp2: tp2 ? tp2.toFixed(2) : "--",
+        entry,
+        sl,
+        tp1,
+        tp2,
         time,
         mode,
         status: "Running"
       };
 
-      signalBox.innerHTML = 
-        `📊 ${pair}: <b>${direction}</b><br>
-        🟡 Entry: ${activeSignal.entry}<br>
-        🎯 TP1: ${activeSignal.tp1} | TP2: ${activeSignal.tp2}<br>
-        🛑 SL: ${activeSignal.sl}<br>
-        🕒 Time: ${time}<br>
-        ⚙️ Mode: <b>${mode}</b>`;
+      signalBox.innerHTML = `
+        📊 ${pair}: <b>${direction}</b><br>
+        ⚙️ Mode: ${mode}<br>
+        🟡 Entry: ${entry}<br>
+        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+        🛑 SL: ${sl}<br>
+        🕒 Time: ${time}
+      `;
 
       startLiveUpdate();
     }
@@ -128,33 +147,36 @@
     }
 
     function startLiveUpdate() {
-      const interval = setInterval(() => {
+      const interval = setInterval(async () => {
         if (!activeSignal) return clearInterval(interval);
 
-        const livePrice = parseFloat((Math.random() * 1000 + 100000).toFixed(2));
-        const { direction, entry, tp1, tp2, sl, mode, pair } = activeSignal;
+        const livePrice = await fetchLivePrice(activeSignal.pair);
+        if (!livePrice) return;
 
-        let statusMsg = `📊 ${pair}: <b>${direction}</b><br>
+        const { direction, entry, tp1, tp2, sl, mode } = activeSignal;
+        let statusMsg = `
+          📊 ${activeSignal.pair}: <b>${direction}</b><br>
+          ⚙️ Mode: ${mode}<br>
           🟡 Entry: ${entry}<br>
           🎯 TP1: ${tp1} | TP2: ${tp2}<br>
           🛑 SL: ${sl}<br>
           📍 Live Price: ${livePrice}<br>
-          ⚙️ Mode: <b>${mode}</b><br>`;
+        `;
 
         const hitTP1 = direction === "BUY" ? livePrice >= tp1 : livePrice <= tp1;
         const hitTP2 = direction === "BUY" ? livePrice >= tp2 : livePrice <= tp2;
         const hitSL = direction === "BUY" ? livePrice <= sl : livePrice >= sl;
 
-        if (tp2 !== "--" && hitTP2) {
-          statusMsg += `✅ TP2 Hit! Signal closed.`;
+        if (hitTP2) {
+          statusMsg += "✅ TP2 Hit! Signal closed.";
           activeSignal = null;
         } else if (hitTP1) {
-          statusMsg += `✅ TP1 Hit! Signal active.`;
+          statusMsg += "✅ TP1 Hit! Signal active.";
         } else if (hitSL) {
-          statusMsg += `❌ SL Hit! Signal closed.`;
+          statusMsg += "❌ SL Hit! Signal closed.";
           activeSignal = null;
         } else {
-          statusMsg += `📈 Trade is live...`;
+          statusMsg += "📈 Trade is live...";
         }
 
         signalBox.innerHTML = statusMsg;
@@ -164,5 +186,6 @@
     setInterval(updateTime, 1000);
     updateTime();
     loadChart();
-  </script></body>
+  </script>
+</body>
 </html>
