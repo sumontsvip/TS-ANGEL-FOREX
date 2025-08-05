@@ -133,23 +133,25 @@ iframe {
       tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
     }
 
-    async function fetchLivePrice(pair) {
-      try {
-        if (pair === "BTCUSD") {
-          const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
-          const data = await res.json();
-          return parseFloat(data.price);
-        } else {
-          const res = await fetch("https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&apikey=demo&outputsize=1");
-          const data = await res.json();
-          return parseFloat(data.values[0].close);
-        }
-      } catch (error) {
-        signalBox.innerHTML = "❌ Error fetching live price!";
-        return null;
-      }
+  async function fetchLivePrice(pair) {
+  try {
+    if (pair === "BTCUSD") {
+      const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+      const data = await res.json();
+      return parseFloat(data.price);
+    } else {
+      // XAUUSD (Gold) price from metals.live
+      const res = await fetch("https://api.metals.live/v1/spot");
+      const data = await res.json();
+      const goldPrice = data.find(item => item.hasOwnProperty("gold"));
+      return parseFloat(goldPrice.gold);
     }
-
+  } catch (error) {
+    signalBox.innerHTML = "❌ Error fetching live price!";
+    console.error(error);
+    return null;
+  }
+  }
     async function generateSignal() {
       const capital = parseFloat(capitalInput.value) || 100;
       const risk = 0.01;
