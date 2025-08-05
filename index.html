@@ -1,114 +1,112 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TS Angel Forex AI</title>
   <style>
+    @keyframes neon-flicker {
+      0%, 100% { text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
+      50% { text-shadow: 0 0 2px #0ff, 0 0 5px #0ff; }
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
+      50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
+    }
+
     body {
-      background-color: #0f0f0f;
-      color: white;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      text-align: center;
+      background-color: #000;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
       padding: 20px;
+      text-align: center;
       overflow-x: hidden;
-    }h1 {
-  font-size: 1.8rem;
-  color: #00ffff;
-  text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
-  animation: glowPulse 2s infinite ease-in-out;
-}
+    }
 
-#timeDisplay {
-  color: #ffcc00;
-  font-size: 1.2rem;
-  text-shadow: 0 0 5px #ffcc00;
-}
+    h1 {
+      color: #00ffe7;
+      animation: neon-flicker 1.5s infinite;
+    }
 
-select, button {
-  padding: 10px;
-  margin: 10px;
-  font-size: 1rem;
-  border-radius: 5px;
-  background-color: #111;
-  color: #00ffff;
-  border: 1px solid #00ffff;
-  box-shadow: 0 0 5px #00ffff;
-  transition: all 0.3s ease-in-out;
-}
+    #timeDisplay {
+      font-size: 1.2rem;
+      color: #ffcc00;
+      animation: neon-flicker 2s infinite;
+    }
 
-button:hover {
-  background-color: #00ffff;
-  color: #000;
-  box-shadow: 0 0 10px #00ffff;
-}
+    select, button {
+      padding: 12px 20px;
+      margin: 10px;
+      font-size: 1rem;
+      border-radius: 5px;
+      background-color: #111;
+      color: #00ffea;
+      border: 2px solid #00ffea;
+      cursor: pointer;
+      animation: glow-pulse 2s infinite;
+    }
 
-.signal-box {
-  margin-top: 20px;
-  background: #1e1e1e;
-  padding: 20px;
-  border-radius: 15px;
-  color: #ffcc00;
-  box-shadow: 0 0 10px #00ffff, inset 0 0 10px #00ffff;
-  animation: borderFlow 4s infinite ease-in-out;
-}
+    button:hover {
+      background-color: #00ffea;
+      color: black;
+      box-shadow: none;
+    }
 
-iframe {
-  width: 100%;
-  height: 500px;
-  border: none;
-  margin-top: 20px;
-  box-shadow: 0 0 15px #00ffff;
-}
+    iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+      margin-top: 25px;
+      box-shadow: 0 0 20px #00ffe7;
+      border-radius: 10px;
+      animation: glow-pulse 3s infinite;
+    }
 
-.footer {
-  margin-top: 20px;
-  font-size: 1rem;
-  color: #00ff99;
-  text-shadow: 0 0 5px #00ff99;
-  animation: glowPulse 3s infinite ease-in-out;
-}
+    .signal-box {
+      margin-top: 25px;
+      background: #111;
+      padding: 20px;
+      border-radius: 10px;
+      color: #ffcc00;
+      font-size: 1.1rem;
+      animation: glow-pulse 1.5s infinite;
+    }
 
-@keyframes glowPulse {
-  0%, 100% {
-    text-shadow: 0 0 5px #00fff7, 0 0 10px #00fff7, 0 0 20px #00fff7;
-  }
-  50% {
-    text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff, 0 0 40px #ff00ff;
-  }
-}
-
-@keyframes borderFlow {
-  0% {
-    box-shadow: 0 0 5px #00ffff, inset 0 0 10px #00ffff;
-  }
-  50% {
-    box-shadow: 0 0 15px #ff00ff, inset 0 0 20px #ff00ff;
-  }
-  100% {
-    box-shadow: 0 0 5px #00ffff, inset 0 0 10px #00ffff;
-  }
-}
-
+    .watermark {
+      margin-top: 40px;
+      font-size: 1.2rem;
+      color: #00ffe7;
+      animation: neon-flicker 2s infinite;
+    }
   </style>
 </head>
 <body>
   <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
-  <p id="timeDisplay">⏰ Current Indian Time: --:--:--</p>  <select id="pairSelect">
+  <p id="timeDisplay">⏰ Current Indian Time: </p>
+
+  <select id="pairSelect">
     <option value="BTCUSD">BTCUSD</option>
     <option value="XAUUSD">XAUUSD</option>
-  </select><button onclick="generateSignal()">📡 Generate Signal</button>
+  </select>
 
-  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  <iframe id="tvChart"></iframe>  <div class="footer">🔦 Created by Trader Sumon</div>  <script>
+  <button onclick="generateSignal()">📡 Generate Signal</button>
+  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
+
+  <iframe id="tvChart"></iframe>
+
+  <div class="watermark">💡 Created by Trader Sumon</div>
+
+  <script>
     const pairSelect = document.getElementById("pairSelect");
     const tvChart = document.getElementById("tvChart");
     const signalBox = document.getElementById("signalBox");
     const timeDisplay = document.getElementById("timeDisplay");
+    let activeSignal = null;
 
-    function updateTime() {
-      const now = new Date();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-      timeDisplay.textContent = `⏰ Current Indian Time: ${time}`;
-    }
+    pairSelect.addEventListener("change", function () {
+      loadChart();
+    });
 
     function loadChart() {
       const symbol = pairSelect.value;
@@ -116,12 +114,122 @@ iframe {
       tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
     }
 
+    async function fetchLivePrice(pair) {
+      try {
+        if (pair === "BTCUSD") {
+          const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+          const data = await res.json();
+          return parseFloat(data.price);
+        } else {
+          const res = await fetch("https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&apikey=cd96961a49e242fe939a80866e70c57d&outputsize=1");
+          const data = await res.json();
+          return parseFloat(data.values[0].close);
+        }
+      } catch (error) {
+        signalBox.innerHTML = "❌ Error fetching live price!";
+        console.error(error);
+        return null;
+      }
+    }
+
     async function generateSignal() {
-      signalBox.innerHTML = "🚨 Generating signal... (placeholder)";
+      const now = new Date();
+      const pair = pairSelect.value;
+      const day = now.getDay();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+
+      if (activeSignal) {
+        signalBox.innerHTML = "⏳ Wait: A signal is already active!";
+        return;
+      }
+
+      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+        signalBox.innerHTML = "⚠️ Gold market is closed today.";
+        return;
+      }
+
+      const price = await fetchLivePrice(pair);
+      if (!price) return;
+
+      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      const entry = parseFloat(price.toFixed(2));
+      const sl = direction === "BUY" ? (entry - 70).toFixed(2) : (entry + 70).toFixed(2);
+      const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
+      const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
+
+      const modes = ["Swing", "Intraday", "Scalping"];
+      const mode = modes[Math.floor(Math.random() * modes.length)];
+
+      activeSignal = {
+        pair,
+        direction,
+        entry,
+        sl,
+        tp1,
+        tp2,
+        time,
+        mode,
+        status: "Running"
+      };
+
+      signalBox.innerHTML = `
+        📊 ${pair}: <b>${direction}</b><br>
+        ⚙️ Mode: <b>${mode}</b><br>
+        🟡 Entry: ${entry}<br>
+        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+        🛑 SL: ${sl}<br>
+        🕒 Time: ${time}
+      `;
+
+      startLiveUpdate();
+    }
+
+    function updateTime() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+      timeDisplay.textContent = `⏰ Current Indian Time: ${time}`;
+    }
+
+    function startLiveUpdate() {
+      const interval = setInterval(async () => {
+        if (!activeSignal) return clearInterval(interval);
+
+        const livePrice = await fetchLivePrice(activeSignal.pair);
+        if (!livePrice) return;
+
+        const { direction, entry, tp1, tp2, sl, mode } = activeSignal;
+        let statusMsg = `
+          📊 ${activeSignal.pair}: <b>${direction}</b><br>
+          ⚙️ Mode: <b>${mode}</b><br>
+          🟡 Entry: ${entry}<br>
+          🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+          🛑 SL: ${sl}<br>
+          📍 Live Price: ${livePrice}<br>
+        `;
+
+        const hitTP1 = direction === "BUY" ? livePrice >= tp1 : livePrice <= tp1;
+        const hitTP2 = direction === "BUY" ? livePrice >= tp2 : livePrice <= tp2;
+        const hitSL = direction === "BUY" ? livePrice <= sl : livePrice >= sl;
+
+        if (hitTP2) {
+          statusMsg += "✅ TP2 Hit! Signal closed.";
+          activeSignal = null;
+        } else if (hitTP1) {
+          statusMsg += "✅ TP1 Hit! Signal active.";
+        } else if (hitSL) {
+          statusMsg += "❌ SL Hit! Signal closed.";
+          activeSignal = null;
+        } else {
+          statusMsg += "📈 Trade is live...";
+        }
+
+        signalBox.innerHTML = statusMsg;
+      }, 5000);
     }
 
     setInterval(updateTime, 1000);
     updateTime();
     loadChart();
-  </script></body>
+  </script>
+</body>
 </html>
