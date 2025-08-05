@@ -6,29 +6,69 @@
   <title>TS Angel Forex AI</title>
   <style>
     body {
-      background-color: #0f0f0f;
-      color: white;
-      font-family: Arial, sans-serif;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: 'Arial', sans-serif;
       padding: 20px;
       text-align: center;
+      overflow-x: hidden;
     }
+
+    h1 {
+      color: #00ffe7;
+      text-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7, 0 0 15px #00ffe7;
+    }
+
+    #timeDisplay {
+      font-size: 1.1rem;
+      color: #ffcc00;
+      text-shadow: 0 0 5px #ffcc00;
+    }
+
     select, button {
-      padding: 10px;
+      padding: 12px 20px;
       margin: 10px;
       font-size: 1rem;
+      border-radius: 5px;
+      background-color: #111;
+      color: #00ffea;
+      border: 2px solid #00ffea;
+      cursor: pointer;
+      text-shadow: 0 0 5px #00ffea;
+      box-shadow: 0 0 10px #00ffea;
     }
+
+    button:hover {
+      background-color: #00ffea;
+      color: black;
+      text-shadow: none;
+    }
+
     iframe {
       width: 100%;
       height: 500px;
       border: none;
-      margin-top: 20px;
+      margin-top: 25px;
+      box-shadow: 0 0 15px #00ffe7;
+      border-radius: 10px;
     }
+
     .signal-box {
-      margin-top: 20px;
-      background: #1e1e1e;
+      margin-top: 25px;
+      background: #111;
       padding: 20px;
       border-radius: 10px;
       color: #ffcc00;
+      font-size: 1.1rem;
+      text-shadow: 0 0 5px #ffcc00;
+      box-shadow: 0 0 10px #ffcc00;
+    }
+
+    .watermark {
+      margin-top: 40px;
+      font-size: 1.2rem;
+      color: #00ffe7;
+      text-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7;
     }
   </style>
 </head>
@@ -46,6 +86,8 @@
 
   <iframe id="tvChart"></iframe>
 
+  <div class="watermark">💡 Created by Trader Sumon</div>
+
   <script>
     const pairSelect = document.getElementById("pairSelect");
     const tvChart = document.getElementById("tvChart");
@@ -53,7 +95,9 @@
     const timeDisplay = document.getElementById("timeDisplay");
     let activeSignal = null;
 
-    pairSelect.addEventListener("change", loadChart);
+    pairSelect.addEventListener("change", function () {
+      loadChart();
+    });
 
     function loadChart() {
       const symbol = pairSelect.value;
@@ -104,17 +148,8 @@
       const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
       const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
 
-      // 📌 Mode detection logic
-      let mode = "Scalping";
-      if (pair === "XAUUSD") {
-        if (entry < 2200) mode = "Scalping";
-        else if (entry < 2500) mode = "Intraday";
-        else mode = "Swing";
-      } else if (pair === "BTCUSD") {
-        if (entry < 30000) mode = "Scalping";
-        else if (entry < 50000) mode = "Intraday";
-        else mode = "Swing";
-      }
+      const modes = ["Swing", "Intraday", "Scalping"];
+      const mode = modes[Math.floor(Math.random() * modes.length)];
 
       activeSignal = {
         pair,
@@ -130,7 +165,7 @@
 
       signalBox.innerHTML = `
         📊 ${pair}: <b>${direction}</b><br>
-        ⚙️ Mode: ${mode}<br>
+        ⚙️ Mode: <b>${mode}</b><br>
         🟡 Entry: ${entry}<br>
         🎯 TP1: ${tp1} | TP2: ${tp2}<br>
         🛑 SL: ${sl}<br>
@@ -156,7 +191,7 @@
         const { direction, entry, tp1, tp2, sl, mode } = activeSignal;
         let statusMsg = `
           📊 ${activeSignal.pair}: <b>${direction}</b><br>
-          ⚙️ Mode: ${mode}<br>
+          ⚙️ Mode: <b>${mode}</b><br>
           🟡 Entry: ${entry}<br>
           🎯 TP1: ${tp1} | TP2: ${tp2}<br>
           🛑 SL: ${sl}<br>
