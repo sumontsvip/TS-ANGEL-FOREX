@@ -2,156 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TS Angel Forex AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS Angel Forex - Live Signal</title>
   <style>
     body {
-      background-color: #0f0f0f;
-      color: white;
       font-family: Arial, sans-serif;
-      padding: 20px;
+      background: #000;
+      color: #0f0;
       text-align: center;
-    }
-    select, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 1rem;
-    }
-    iframe {
-      width: 100%;
-      height: 500px;
-      border: none;
-      margin-top: 20px;
+      padding: 20px;
     }
     .signal-box {
+      border: 2px solid #0f0;
+      padding: 15px;
       margin-top: 20px;
-      background: #1e1e1e;
-      padding: 20px;
       border-radius: 10px;
-      color: #ffcc00;
+      background: #111;
+    }
+    h1 {
+      color: #0f0;
+      margin-bottom: 10px;
+    }
+    .label {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
-  <p id="timeDisplay">⏰ Current Indian Time: </p>
-
-  <select id="pairSelect">
-    <option value="BTCUSD">BTCUSD</option>
-    <option value="XAUUSD">XAUUSD</option>
-  </select>
-
-  <button onclick="generateSignal()">📡 Generate Signal</button>
-  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
-
-  <iframe id="tvChart"></iframe>
+  <h1>📡 TS Angel Forex - Live Signal (BTC + GOLD)</h1>
+  <div id="signal" class="signal-box">
+    🔄 Loading latest signal...
+  </div>
 
   <script>
-    const pairSelect = document.getElementById("pairSelect");
-    const tvChart = document.getElementById("tvChart");
-    const signalBox = document.getElementById("signalBox");
-    const timeDisplay = document.getElementById("timeDisplay");
+    async function loadSignal() {
+      try {
+        const res = await fetch('/api/signal');
+        const data = await res.json();
 
-    let activeSignal = null;
-
-    pairSelect.addEventListener("change", function () {
-      loadChart();
-    });
-
-    function loadChart() {
-      const symbol = pairSelect.value;
-      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
-      tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
-    }
-
-    function generateSignal() {
-      const now = new Date();
-      const pair = pairSelect.value;
-      const day = now.getDay();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-
-      if (activeSignal) {
-        signalBox.innerHTML = `⏳ Wait: A signal is already active!`;
-        return;
-      }
-
-      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
-        return;
-      }
-
-      const price = (Math.random() * 1000 + 100000).toFixed(2);
-      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
-      const entry = parseFloat(price);
-      const sl = direction === "BUY" ? (entry - 70).toFixed(2) : (entry + 70).toFixed(2);
-      const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
-      const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
-
-      activeSignal = {
-        pair,
-        direction,
-        entry,
-        sl,
-        tp1,
-        tp2,
-        time,
-        status: "Running"
-      };
-
-      signalBox.innerHTML = `
-        📊 ${pair}: <b>${direction}</b><br>
-        🟡 Entry: ${entry}<br>
-        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-        🛑 SL: ${sl}<br>
-        🕒 Time: ${time}
-      `;
-
-      // Start tracking signal status
-      startLiveUpdate();
-    }
-
-    function updateTime() {
-      const now = new Date();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-      timeDisplay.textContent = `⏰ Current Indian Time: ${time}`;
-    }
-
-    function startLiveUpdate() {
-      const interval = setInterval(() => {
-        if (!activeSignal) return clearInterval(interval);
-
-        const livePrice = (Math.random() * 1000 + 100000).toFixed(2);
-        const { direction, entry, tp1, tp2, sl } = activeSignal;
-
-        let statusMsg = `📊 ${activeSignal.pair}: <b>${direction}</b><br>
-          🟡 Entry: ${entry}<br>
-          🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-          🛑 SL: ${sl}<br>
-          📍 Live Price: ${livePrice}<br>`;
-
-        const hitTP1 = direction === "BUY" ? livePrice >= tp1 : livePrice <= tp1;
-        const hitTP2 = direction === "BUY" ? livePrice >= tp2 : livePrice <= tp2;
-        const hitSL = direction === "BUY" ? livePrice <= sl : livePrice >= sl;
-
-        if (hitTP2) {
-          statusMsg += `✅ TP2 Hit! Signal closed.`;
-          activeSignal = null;
-        } else if (hitTP1) {
-          statusMsg += `✅ TP1 Hit! Signal active.`;
-        } else if (hitSL) {
-          statusMsg += `❌ SL Hit! Signal closed.`;
-          activeSignal = null;
+        if (data.signal) {
+          const s = data.signal;
+          document.getElementById("signal").innerHTML = `
+            <div><span class="label">PAIR:</span> ${s.pair}</div>
+            <div><span class="label">DIRECTION:</span> ${s.direction}</div>
+            <div><span class="label">ENTRY:</span> ${s.entry}</div>
+            <div><span class="label">SL:</span> ${s.sl}</div>
+            <div><span class="label">TP1:</span> ${s.tp1}</div>
+            <div><span class="label">TP2:</span> ${s.tp2}</div>
+            <div><span class="label">STATUS:</span> ${s.status}</div>
+            <div><span class="label">TIME:</span> ${s.time}</div>
+          `;
         } else {
-          statusMsg += `📈 Trade is live...`;
+          document.getElementById("signal").innerHTML = `⏳ ${data.message || "Waiting for signal..."}`;
         }
-
-        signalBox.innerHTML = statusMsg;
-      }, 5000);
+      } catch (err) {
+        document.getElementById("signal").innerHTML = "⚠️ Error loading signal.";
+      }
     }
 
-    setInterval(updateTime, 1000);
-    updateTime();
-    loadChart();
+    // First load
+    loadSignal();
+
+    // Refresh every 5 seconds
+    setInterval(loadSignal, 5000);
   </script>
 </body>
 </html>
