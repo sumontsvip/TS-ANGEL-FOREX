@@ -2,26 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TS Angel Forex AI</title>
   <style>
-    @keyframes neon-flicker {
-      0%, 100% { text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
-      50% { text-shadow: 0 0 2px #0ff, 0 0 5px #0ff; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      font-family: 'Arial', sans-serif;
+      color: white;
+      background: black;
     }
 
-    @keyframes glow-pulse {
-      0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
-      50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
+    canvas#starfield {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
     }
 
     body {
-      background-color: #000;
-      color: #fff;
-      font-family: 'Arial', sans-serif;
-      padding: 20px;
       text-align: center;
-      overflow-x: hidden;
+      padding: 20px;
     }
 
     h1 {
@@ -50,7 +53,6 @@
     button:hover {
       background-color: #00ffea;
       color: black;
-      box-shadow: none;
     }
 
     iframe {
@@ -58,8 +60,8 @@
       height: 500px;
       border: none;
       margin-top: 25px;
-      box-shadow: 0 0 20px #00ffe7;
       border-radius: 10px;
+      box-shadow: 0 0 20px #00ffe7;
       animation: glow-pulse 3s infinite;
     }
 
@@ -68,8 +70,8 @@
       background: #111;
       padding: 20px;
       border-radius: 10px;
-      color: #ffcc00;
       font-size: 1.1rem;
+      color: #ffcc00;
       animation: glow-pulse 1.5s infinite;
     }
 
@@ -79,9 +81,22 @@
       color: #00ffe7;
       animation: neon-flicker 2s infinite;
     }
+
+    @keyframes neon-flicker {
+      0%, 100% { text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
+      50% { text-shadow: 0 0 2px #0ff, 0 0 5px #0ff; }
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
+      50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
+    }
   </style>
 </head>
 <body>
+
+  <canvas id="starfield"></canvas>
+
   <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
   <p id="timeDisplay">⏰ Current Indian Time: </p>
 
@@ -90,19 +105,27 @@
     <option value="XAUUSD">XAUUSD</option>
   </select>
 
-  <button onclick="generateSignal()">📡 Generate Signal</button>
+  <button onclick="playClick(); generateSignal()">📡 Generate Signal</button>
   <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
 
   <iframe id="tvChart"></iframe>
 
   <div class="watermark">💡 Created by Trader Sumon</div>
 
+  <!-- Button click sound -->
+  <audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
+
   <script>
     const pairSelect = document.getElementById("pairSelect");
     const tvChart = document.getElementById("tvChart");
     const signalBox = document.getElementById("signalBox");
     const timeDisplay = document.getElementById("timeDisplay");
+    const clickSound = document.getElementById("clickSound");
     let activeSignal = null;
+
+    function playClick() {
+      clickSound.play();
+    }
 
     pairSelect.addEventListener("change", function () {
       loadChart();
@@ -156,21 +179,10 @@
       const sl = direction === "BUY" ? (entry - 70).toFixed(2) : (entry + 70).toFixed(2);
       const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
       const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
-
       const modes = ["Swing", "Intraday", "Scalping"];
       const mode = modes[Math.floor(Math.random() * modes.length)];
 
-      activeSignal = {
-        pair,
-        direction,
-        entry,
-        sl,
-        tp1,
-        tp2,
-        time,
-        mode,
-        status: "Running"
-      };
+      activeSignal = { pair, direction, entry, sl, tp1, tp2, time, mode, status: "Running" };
 
       signalBox.innerHTML = `
         📊 ${pair}: <b>${direction}</b><br>
@@ -193,7 +205,6 @@
     function startLiveUpdate() {
       const interval = setInterval(async () => {
         if (!activeSignal) return clearInterval(interval);
-
         const livePrice = await fetchLivePrice(activeSignal.pair);
         if (!livePrice) return;
 
@@ -230,6 +241,45 @@
     setInterval(updateTime, 1000);
     updateTime();
     loadChart();
+
+    // Starfield animation background
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 150; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.5,
+        speed: Math.random() * 0.5 + 0.2
+      });
+    }
+
+    function animateStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ffe7';
+      for (let s of stars) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+        s.y += s.speed;
+        if (s.y > canvas.height) {
+          s.y = 0;
+          s.x = Math.random() * canvas.width;
+        }
+      }
+      requestAnimationFrame(animateStars);
+    }
+
+    animateStars();
   </script>
 </body>
 </html>
