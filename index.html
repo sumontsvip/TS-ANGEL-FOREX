@@ -65,57 +65,64 @@
   <div id="signalBox">📊 Signal will appear here...</div>
 
   <script>
-    const pairSelect = document.getElementById("pairSelect");
-    const tvChart = document.getElementById("tvChart");
-    const signalBox = document.getElementById("signalBox");
-    const timeDisplay = document.getElementById("timeDisplay");
+  let isSignalActive = false;
+  let activeSignal = null;
 
-    let signalActive = false;
-
-    pairSelect.addEventListener("change", function () {
-      const symbol = this.value;
-      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
-      tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
-    });
-
-    function generateSignal() {
-      if (signalActive) {
-        signalBox.innerHTML = "⚠️ Wait! A signal is already active.";
-        return;
-      }
-
-      const now = new Date();
-      const day = now.getDay();
-      const pair = pairSelect.value;
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-
-      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
-        return;
-      }
-
-      const entry = (Math.random() * (113000 - 111000) + 111000).toFixed(2);
-      const tp1 = (parseFloat(entry) + 50).toFixed(2);
-      const tp2 = (parseFloat(entry) + 100).toFixed(2);
-      const sl = (parseFloat(entry) - 70).toFixed(2);
-      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
-
-      signalBox.innerHTML = `📊 <b>${pair}</b>: <span style='color:yellow'>${direction}</span><br>
-        🟡 Entry: <b>${entry}</b><br>
-        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-        🛑 SL: ${sl}`;
-
-      signalActive = true;
+  function generateSignal() {
+    if (isSignalActive) {
+      signalBox.innerHTML = `<span style="color:red;">⛔ Wait, a signal is already active.</span>`;
+      return;
     }
 
-    function updateTime() {
-      const now = new Date();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
-      timeDisplay.textContent = `Current Indian Time: ${time}`;
+    const now = new Date();
+    const pair = pairSelect.value;
+    const day = now.getDay();
+    const time = now.toLocaleTimeString("en-IN", { hour12: true });
+
+    if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+      signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+      return;
     }
 
-    setInterval(updateTime, 1000);
-    updateTime();
-  </script>
+    // Simulate entry price from TradingView (Replace with real API if needed)
+    const entryPrice = (Math.random() * (113800 - 113700) + 113700).toFixed(2);
+    const tp1 = (parseFloat(entryPrice) + 50).toFixed(2);
+    const tp2 = (parseFloat(entryPrice) + 100).toFixed(2);
+    const sl = (parseFloat(entryPrice) - 70).toFixed(2);
+    const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+
+    signalBox.innerHTML = `
+      📊 <b>${pair}</b>: <span style="color:yellow">${direction}</span><br>
+      🟡 Entry: ${entryPrice}<br>
+      🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+      🛑 SL: ${sl}<br>
+      ⏰ Time: ${time}<br>
+      <span style='color:#00ffff'>Live Tracking Enabled...</span>
+    `;
+
+    isSignalActive = true;
+    activeSignal = { entryPrice: parseFloat(entryPrice), direction, pair };
+
+    // Start Live Tracking
+    startLiveTracking();
+  }
+
+  function startLiveTracking() {
+    const interval = setInterval(() => {
+      if (!activeSignal) return;
+
+      // Fake live price fluctuation (Replace with real API later)
+      const fluctuation = (Math.random() * 10 - 5).toFixed(2);
+      const currentPrice = (
+        activeSignal.entryPrice +
+        (activeSignal.direction === "BUY" ? parseFloat(fluctuation) : -parseFloat(fluctuation))
+      ).toFixed(2);
+      const pnl = (currentPrice - activeSignal.entryPrice).toFixed(2);
+
+      signalBox.innerHTML += `<br>📉 Live Price: ${currentPrice} | PnL: ${pnl}`;
+    }, 3000);
+  }
+</script>
+
 </body>
 </html>
