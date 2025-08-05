@@ -91,27 +91,17 @@ iframe {
 
   </style>
 </head>
-<body>
-  <canvas id="starfield"></canvas>  <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
+<body><canvas id="starfield"></canvas>
+
+  <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
   <p id="timeDisplay">⏰ Current Indian Time: </p>  <select id="pairSelect">
     <option value="BTCUSD">BTCUSD</option>
     <option value="XAUUSD">XAUUSD</option>
   </select><button onclick="playClick(); generateSignal()">📡 Generate Signal</button>
 
-  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  <iframe id="tvChart"></iframe>  <div class="watermark">💡 Created by Trader Sumon</div><audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
+  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  <iframe id="tvChart"></iframe>  <div class="watermark">💡 Created by Trader Sumon</div>  <!-- Button click sound --><audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
 
   <script>
-    const synth = window.speechSynthesis;
-
-    function speak(text) {
-      if (synth.speaking) synth.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-IN';
-      utterance.pitch = 1;
-      utterance.rate = 1;
-      synth.speak(utterance);
-    }
-
     const pairSelect = document.getElementById("pairSelect");
     const tvChart = document.getElementById("tvChart");
     const signalBox = document.getElementById("signalBox");
@@ -119,11 +109,19 @@ iframe {
     const clickSound = document.getElementById("clickSound");
     let activeSignal = null;
 
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-IN';
+      speechSynthesis.speak(utterance);
+    }
+
     function playClick() {
       clickSound.play();
     }
 
-    pairSelect.addEventListener("change", loadChart);
+    pairSelect.addEventListener("change", function () {
+      loadChart();
+    });
 
     function loadChart() {
       const symbol = pairSelect.value;
@@ -138,7 +136,7 @@ iframe {
           const data = await res.json();
           return parseFloat(data.price);
         } else {
-          const res = await fetch("https://api.twelvedata.com/price?symbol=XAUUSD&apikey=cd96961a49e242fe939a80866e70c57d");
+          const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d");
           const data = await res.json();
           return parseFloat(data.price);
         }
@@ -156,14 +154,16 @@ iframe {
       const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
       if (activeSignal) {
-        speak("Wait! A signal is already active");
-        signalBox.innerHTML = "⏳ Wait: A signal is already active!";
+        const msg = "⏳ Wait: A signal is already active!";
+        signalBox.innerHTML = msg;
+        speak(msg);
         return;
       }
 
       if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        speak("Gold market is closed today.");
-        signalBox.innerHTML = "⚠️ Gold market is closed today.";
+        const msg = "⚠️ Gold market is closed today.";
+        signalBox.innerHTML = msg;
+        speak("Gold market is closed today");
         return;
       }
 
@@ -180,16 +180,12 @@ iframe {
 
       activeSignal = { pair, direction, entry, sl, tp1, tp2, time, mode, status: "Running" };
 
-      signalBox.innerHTML = `
-        📊 ${pair}: <b>${direction}</b><br>
-        ⚙️ Mode: <b>${mode}</b><br>
-        🟡 Entry: ${entry}<br>
-        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-        🛑 SL: ${sl}<br>
-        🕒 Time: ${time}
-      `;
+      const signalText =
+        `📊 ${pair}: ${direction}\nMode: ${mode}\nEntry: ${entry}\nTP1: ${tp1} | TP2: ${tp2}\nSL: ${sl}\nTime: ${time}`;
 
-      speak(`Signal generated. ${pair}. ${direction}. Entry at ${entry}. Stop loss at ${sl}. Take profit at ${tp1} and ${tp2}. Mode is ${mode}.`);
+      signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
+      speak(`${pair} ${direction}. Entry ${entry}. TP1 ${tp1}, TP2 ${tp2}, Stop Loss ${sl}. Mode ${mode}`);
+
       startLiveUpdate();
     }
 
@@ -199,10 +195,6 @@ iframe {
       timeDisplay.textContent = `⏰ Current Indian Time: ${time}`;
     }
 
-    setInterval(updateTime, 1000);
-    updateTime();
-    loadChart();
-
     function startLiveUpdate() {
       const interval = setInterval(async () => {
         if (!activeSignal) return clearInterval(interval);
@@ -210,14 +202,13 @@ iframe {
         if (!livePrice) return;
 
         const { direction, entry, tp1, tp2, sl, mode } = activeSignal;
-        let statusMsg = `
-          📊 ${activeSignal.pair}: <b>${direction}</b><br>
-          ⚙️ Mode: <b>${mode}</b><br>
-          🟡 Entry: ${entry}<br>
-          🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-          🛑 SL: ${sl}<br>
-          📍 Live Price: ${livePrice}<br>
-        `;
+        let statusMsg =
+          `📊 ${activeSignal.pair}: ${direction}<br>` +
+          `⚙️ Mode: ${mode}<br>` +
+          `🟡 Entry: ${entry}<br>` +
+          `🎯 TP1: ${tp1} | TP2: ${tp2}<br>` +
+          `🛑 SL: ${sl}<br>` +
+          `📍 Live Price: ${livePrice}<br>`;
 
         const hitTP1 = direction === "BUY" ? livePrice >= tp1 : livePrice <= tp1;
         const hitTP2 = direction === "BUY" ? livePrice >= tp2 : livePrice <= tp2;
@@ -225,11 +216,11 @@ iframe {
 
         if (hitTP2) {
           statusMsg += "✅ TP2 Hit! Signal closed.";
-          speak("Take profit 2 hit. Signal closed.");
+          speak("Take Profit Two hit. Signal closed.");
           activeSignal = null;
         } else if (hitTP1) {
           statusMsg += "✅ TP1 Hit! Signal active.";
-          speak("Take profit 1 hit. Signal is active.");
+          speak("Take Profit One hit. Trade running.");
         } else if (hitSL) {
           statusMsg += "❌ SL Hit! Signal closed.";
           speak("Stop loss hit. Signal closed.");
@@ -241,5 +232,48 @@ iframe {
         signalBox.innerHTML = statusMsg;
       }, 5000);
     }
+
+    setInterval(updateTime, 1000);
+    updateTime();
+    loadChart();
+
+    // Starfield animation background
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 150; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.5,
+        speed: Math.random() * 0.5 + 0.2
+      });
+    }
+
+    function animateStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ffe7';
+      for (let s of stars) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+        s.y += s.speed;
+        if (s.y > canvas.height) {
+          s.y = 0;
+          s.x = Math.random() * canvas.width;
+        }
+      }
+      requestAnimationFrame(animateStars);
+    }
+
+    animateStars();
   </script></body>
 </html>
