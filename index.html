@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -12,108 +11,95 @@
       font-family: 'Arial', sans-serif;
       color: white;
       background: black;
-    }
+    }canvas#starfield {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
 
-    canvas#starfield {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-    }
+body {
+  text-align: center;
+  padding: 20px;
+}
 
-    body {
-      text-align: center;
-      padding: 20px;
-    }
+h1 {
+  color: #00ffe7;
+  animation: neon-flicker 1.5s infinite;
+}
 
-    h1 {
-      color: #00ffe7;
-      animation: neon-flicker 1.5s infinite;
-    }
+#timeDisplay {
+  font-size: 1.2rem;
+  color: #ffcc00;
+  animation: neon-flicker 2s infinite;
+}
 
-    #timeDisplay {
-      font-size: 1.2rem;
-      color: #ffcc00;
-      animation: neon-flicker 2s infinite;
-    }
+select, button {
+  padding: 12px 20px;
+  margin: 10px;
+  font-size: 1rem;
+  border-radius: 5px;
+  background-color: #111;
+  color: #00ffea;
+  border: 2px solid #00ffea;
+  cursor: pointer;
+  animation: glow-pulse 2s infinite;
+}
 
-    select, button {
-      padding: 12px 20px;
-      margin: 10px;
-      font-size: 1rem;
-      border-radius: 5px;
-      background-color: #111;
-      color: #00ffea;
-      border: 2px solid #00ffea;
-      cursor: pointer;
-      animation: glow-pulse 2s infinite;
-    }
+button:hover {
+  background-color: #00ffea;
+  color: black;
+}
 
-    button:hover {
-      background-color: #00ffea;
-      color: black;
-    }
+iframe {
+  width: 100%;
+  height: 500px;
+  border: none;
+  margin-top: 25px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px #00ffe7;
+  animation: glow-pulse 3s infinite;
+}
 
-    iframe {
-      width: 100%;
-      height: 500px;
-      border: none;
-      margin-top: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px #00ffe7;
-      animation: glow-pulse 3s infinite;
-    }
+.signal-box {
+  margin-top: 25px;
+  background: #111;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  color: #ffcc00;
+  animation: glow-pulse 1.5s infinite;
+}
 
-    .signal-box {
-      margin-top: 25px;
-      background: #111;
-      padding: 20px;
-      border-radius: 10px;
-      font-size: 1.1rem;
-      color: #ffcc00;
-      animation: glow-pulse 1.5s infinite;
-    }
+.watermark {
+  margin-top: 40px;
+  font-size: 1.2rem;
+  color: #00ffe7;
+  animation: neon-flicker 2s infinite;
+}
 
-    .watermark {
-      margin-top: 40px;
-      font-size: 1.2rem;
-      color: #00ffe7;
-      animation: neon-flicker 2s infinite;
-    }
+@keyframes neon-flicker {
+  0%, 100% { text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
+  50% { text-shadow: 0 0 2px #0ff, 0 0 5px #0ff; }
+}
 
-    @keyframes neon-flicker {
-      0%, 100% { text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff; }
-      50% { text-shadow: 0 0 2px #0ff, 0 0 5px #0ff; }
-    }
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
+  50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
+}
 
-    @keyframes glow-pulse {
-      0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
-      50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
-    }
   </style>
 </head>
-<body>
-
-  <canvas id="starfield"></canvas>
+<body><canvas id="starfield"></canvas>
 
   <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
-  <p id="timeDisplay">⏰ Current Indian Time: </p>
-
-  <select id="pairSelect">
+  <p id="timeDisplay">⏰ Current Indian Time: </p>  <select id="pairSelect">
     <option value="BTCUSD">BTCUSD</option>
     <option value="XAUUSD">XAUUSD</option>
-  </select>
+  </select><button onclick="playClick(); generateSignal()">📱 Generate Signal</button>
 
-  <button onclick="playClick(); generateSignal()">📡 Generate Signal</button>
-  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
-
-  <iframe id="tvChart"></iframe>
-
-  <div class="watermark">💡 Created by Trader Sumon</div>
-
-  <!-- Button click sound -->
-  <audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
+  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  <iframe id="tvChart"></iframe>  <div class="watermark">💡 Created by Trader Sumon</div><audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
 
   <script>
     const pairSelect = document.getElementById("pairSelect");
@@ -188,8 +174,8 @@
         📊 ${pair}: <b>${direction}</b><br>
         ⚙️ Mode: <b>${mode}</b><br>
         🟡 Entry: ${entry}<br>
-        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-        🛑 SL: ${sl}<br>
+        🌟 TP1: ${tp1} | TP2: ${tp2}<br>
+        🔚 SL: ${sl}<br>
         🕒 Time: ${time}
       `;
 
@@ -213,8 +199,8 @@
           📊 ${activeSignal.pair}: <b>${direction}</b><br>
           ⚙️ Mode: <b>${mode}</b><br>
           🟡 Entry: ${entry}<br>
-          🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-          🛑 SL: ${sl}<br>
+          🌟 TP1: ${tp1} | TP2: ${tp2}<br>
+          🔚 SL: ${sl}<br>
           📍 Live Price: ${livePrice}<br>
         `;
 
@@ -280,6 +266,5 @@
     }
 
     animateStars();
-  </script>
-</body>
+  </script></body>
 </html>
