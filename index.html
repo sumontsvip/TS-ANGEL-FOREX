@@ -3,126 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TS ANGEL FOREX</title>
+  <title>TS Angel Forex AI</title>
   <style>
     body {
-      background-color: #0f172a;
-      color: #f8fafc;
+      background-color: #0f0f0f;
+      color: white;
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #1e293b;
       padding: 20px;
       text-align: center;
-    }
-    h1 {
-      margin: 0;
-      font-size: 24px;
-    }
-    #controls {
-      text-align: center;
-      padding: 20px;
     }
     select, button {
       padding: 10px;
       margin: 10px;
-      font-size: 16px;
+      font-size: 1rem;
     }
-    #tvChart {
+    iframe {
       width: 100%;
       height: 500px;
       border: none;
+      margin-top: 20px;
     }
-    #signalBox {
-      background: #1e293b;
+    .signal-box {
+      margin-top: 20px;
+      background: #1e1e1e;
       padding: 20px;
-      text-align: center;
-      font-size: 20px;
-      margin-top: 10px;
-    }
-    #timeDisplay {
-      text-align: center;
-      margin-top: 10px;
-      color: #94a3b8;
+      border-radius: 10px;
+      color: #ffcc00;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>TS ANGEL - Forex Signal Panel</h1>
-  </header>
-  <div id="controls">
-    <select id="pairSelect">
-      <option value="BTCUSD">BTCUSD</option>
-      <option value="XAUUSD">XAUUSD</option>
-    </select>
-    <button onclick="generateSignal()">Generate Signal</button>
-  </div>
-  <div id="timeDisplay"></div>
-  <iframe id="tvChart" src="https://www.tradingview.com/embed-widget/advanced-chart/?symbol=BINANCE:BTCUSD&theme=dark" frameborder="0"></iframe>
-  <div id="signalBox">📊 Signal will appear here...</div>
+  <h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
+  <p id="timeDisplay">⏰ Current Indian Time: </p>
+
+  <select id="pairSelect">
+    <option value="BTCUSD">BTCUSD</option>
+    <option value="XAUUSD">XAUUSD</option>
+  </select>
+
+  <button onclick="generateSignal()">📡 Generate Signal</button>
+  <div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
+
+  <iframe id="tvChart"></iframe>
 
   <script>
-  let isSignalActive = false;
-  let activeSignal = null;
+    const pairSelect = document.getElementById("pairSelect");
+    const tvChart = document.getElementById("tvChart");
+    const signalBox = document.getElementById("signalBox");
+    const timeDisplay = document.getElementById("timeDisplay");
 
-  function generateSignal() {
-    if (isSignalActive) {
-      signalBox.innerHTML = `<span style="color:red;">⛔ Wait, a signal is already active.</span>`;
-      return;
+    let activeSignal = null;
+
+    pairSelect.addEventListener("change", function () {
+      loadChart();
+    });
+
+    function loadChart() {
+      const symbol = pairSelect.value;
+      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
+      tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
     }
 
-    const now = new Date();
-    const pair = pairSelect.value;
-    const day = now.getDay();
-    const time = now.toLocaleTimeString("en-IN", { hour12: true });
+    function generateSignal() {
+      const now = new Date();
+      const pair = pairSelect.value;
+      const day = now.getDay();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
-    if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-      signalBox.innerHTML = `⚠️ Gold market is closed today.`;
-      return;
+      if (activeSignal) {
+        signalBox.innerHTML = `⏳ Wait: A signal is already active!`;
+        return;
+      }
+
+      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+        return;
+      }
+
+      const price = (Math.random() * 1000 + 100000).toFixed(2);
+      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      const entry = parseFloat(price);
+      const sl = direction === "BUY" ? (entry - 70).toFixed(2) : (entry + 70).toFixed(2);
+      const tp1 = direction === "BUY" ? (entry + 50).toFixed(2) : (entry - 50).toFixed(2);
+      const tp2 = direction === "BUY" ? (entry + 100).toFixed(2) : (entry - 100).toFixed(2);
+
+      activeSignal = {
+        pair,
+        direction,
+        entry,
+        sl,
+        tp1,
+        tp2,
+        time,
+        status: "Running"
+      };
+
+      signalBox.innerHTML = `
+        📊 ${pair}: <b>${direction}</b><br>
+        🟡 Entry: ${entry}<br>
+        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+        🛑 SL: ${sl}<br>
+        🕒 Time: ${time}
+      `;
+
+      // Start tracking signal status
+      startLiveUpdate();
     }
 
-    // Simulate entry price from TradingView (Replace with real API if needed)
-    const entryPrice = (Math.random() * (113800 - 113700) + 113700).toFixed(2);
-    const tp1 = (parseFloat(entryPrice) + 50).toFixed(2);
-    const tp2 = (parseFloat(entryPrice) + 100).toFixed(2);
-    const sl = (parseFloat(entryPrice) - 70).toFixed(2);
-    const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+    function updateTime() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+      timeDisplay.textContent = `⏰ Current Indian Time: ${time}`;
+    }
 
-    signalBox.innerHTML = `
-      📊 <b>${pair}</b>: <span style="color:yellow">${direction}</span><br>
-      🟡 Entry: ${entryPrice}<br>
-      🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-      🛑 SL: ${sl}<br>
-      ⏰ Time: ${time}<br>
-      <span style='color:#00ffff'>Live Tracking Enabled...</span>
-    `;
+    function startLiveUpdate() {
+      const interval = setInterval(() => {
+        if (!activeSignal) return clearInterval(interval);
 
-    isSignalActive = true;
-    activeSignal = { entryPrice: parseFloat(entryPrice), direction, pair };
+        const livePrice = (Math.random() * 1000 + 100000).toFixed(2);
+        const { direction, entry, tp1, tp2, sl } = activeSignal;
 
-    // Start Live Tracking
-    startLiveTracking();
-  }
+        let statusMsg = `📊 ${activeSignal.pair}: <b>${direction}</b><br>
+          🟡 Entry: ${entry}<br>
+          🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+          🛑 SL: ${sl}<br>
+          📍 Live Price: ${livePrice}<br>`;
 
-  function startLiveTracking() {
-    const interval = setInterval(() => {
-      if (!activeSignal) return;
+        const hitTP1 = direction === "BUY" ? livePrice >= tp1 : livePrice <= tp1;
+        const hitTP2 = direction === "BUY" ? livePrice >= tp2 : livePrice <= tp2;
+        const hitSL = direction === "BUY" ? livePrice <= sl : livePrice >= sl;
 
-      // Fake live price fluctuation (Replace with real API later)
-      const fluctuation = (Math.random() * 10 - 5).toFixed(2);
-      const currentPrice = (
-        activeSignal.entryPrice +
-        (activeSignal.direction === "BUY" ? parseFloat(fluctuation) : -parseFloat(fluctuation))
-      ).toFixed(2);
-      const pnl = (currentPrice - activeSignal.entryPrice).toFixed(2);
+        if (hitTP2) {
+          statusMsg += `✅ TP2 Hit! Signal closed.`;
+          activeSignal = null;
+        } else if (hitTP1) {
+          statusMsg += `✅ TP1 Hit! Signal active.`;
+        } else if (hitSL) {
+          statusMsg += `❌ SL Hit! Signal closed.`;
+          activeSignal = null;
+        } else {
+          statusMsg += `📈 Trade is live...`;
+        }
 
-      signalBox.innerHTML += `<br>📉 Live Price: ${currentPrice} | PnL: ${pnl}`;
-    }, 3000);
-  }
-</script>
+        signalBox.innerHTML = statusMsg;
+      }, 5000);
+    }
 
+    setInterval(updateTime, 1000);
+    updateTime();
+    loadChart();
+  </script>
 </body>
 </html>
