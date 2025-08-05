@@ -141,7 +141,7 @@ iframe {
       return parseFloat(data.price);
     } else {
       // XAUUSD (Gold) price from metals.live
-      const res = await fetch("https://api.metals.live/v1/spot");
+      const res = await fetch("https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&apikey=cd96961a49e242fe939a80866e70c57d&outputsize=1");
       const data = await res.json();
       const goldPrice = data.find(item => item.hasOwnProperty("gold"));
       return parseFloat(goldPrice.gold);
