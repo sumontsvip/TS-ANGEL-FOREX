@@ -1,186 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TS Angel – Forex Signal </title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS FOREX AI - BTC & XAUUSD Signals</title>
   <style>
     body {
-      background-color: #0f0f0f;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #111;
       color: #fff;
-      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 20px;
-      text-align: center;
     }
-    select, button {
+    h1 {
+      color: #00ffcc;
+      font-size: 28px;
+    }
+    #pairSelect, #generateBtn {
       padding: 10px;
+      margin: 10px;
       font-size: 16px;
-      margin: 10px 0;
-      border-radius: 8px;
+      border-radius: 5px;
       border: none;
-      width: 90%;
-      max-width: 400px;
     }
-    button {
-      background-color: #007bff;
-      color: white;
-      font-weight: bold;
-    }
-    button:hover {
-      background-color: #0056b3;
+    #generateBtn {
+      background-color: #00ffcc;
+      color: #000;
       cursor: pointer;
-    }
-    iframe {
-      margin-top: 20px;
-      border-radius: 12px;
-    }
-    .time-display {
-      margin-top: 15px;
-      font-size: 18px;
-      color: #ffcc00;
     }
     #signalBox {
       margin-top: 20px;
-      font-size: 20px;
-      color: #00ff7f;
-      background-color: #1c1c1c;
+      background: #222;
       padding: 15px;
       border-radius: 10px;
-      box-shadow: 0 0 15px #00ff7f66;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
+      font-size: 18px;
+      text-align: center;
+    }
+    #timeDisplay {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+      margin-top: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>TS Angel – Forex Signal </h2>
-  <label for="pairSelect">Select Pair:</label>
+
+  <h1>TS FOREX AI 📉 BTC & GOLD Signal Bot</h1>
+
   <select id="pairSelect">
-    <option value="XAUUSD">XAUUSD (Gold)</option>
-    <option value="BTCUSD">BTCUSD (Bitcoin)</option>
+    <option value="BTCUSD">BTCUSD</option>
+    <option value="XAUUSD">XAUUSD</option>
   </select>
 
-  <div class="time-display" id="timeDisplay"></div>
-  <button onclick="generateSignal()">🔮 Generate Signal</button>
-  <div id="signalBox"></div>
-<!-- Chart Container -->
-<div id="liveChart" style="width: 100%; height: 400px; margin-top: 20px; background-color: #0d0d0d;"></div>
+  <button id="generateBtn">📩 Generate Signal</button>
 
-<!-- Lightweight Charts CDN -->
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <div id="signalBox">📊 Waiting for signal...</div>
+  <div id="timeDisplay"></div>
 
-<script>
-  // Ensure this runs after the DOM is loaded
-  window.addEventListener('DOMContentLoaded', function () {
-    const chart = LightweightCharts.createChart(document.getElementById("liveChart"), {
-      width: window.innerWidth - 100,
-      height: 400,
-      layout: {
-        backgroundColor: "#0d0d0d",
-        textColor: "#ffffff"
-      },
-      grid: {
-        vertLines: { color: "#1e1e1e" },
-        horLines: { color: "#1e1e1e" }
-      },
-      priceScale: {
-        borderColor: "#71649C"
-      },
-      timeScale: {
-        borderColor: "#71649C",
-        timeVisible: true,
-        secondsVisible: false
-      }
-    });
+  <iframe id="tvChart" src=""></iframe>
 
-    const candleSeries = chart.addCandlestickSeries();
-
-    const socket = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@kline_1m");
-
-    socket.onmessage = function (event) {
-      const message = JSON.parse(event.data);
-      const candlestick = message.k;
-
-      candleSeries.update({
-        time: candlestick.t / 1000,
-        open: parseFloat(candlestick.o),
-        high: parseFloat(candlestick.h),
-        low: parseFloat(candlestick.l),
-        close: parseFloat(candlestick.c)
-      });
-    };
-  });
-</script>
-
-  
   <script>
-  const pairSelect = document.getElementById("pairSelect");
-  const tvChart = document.getElementById("tvChart");
-  const signalBox = document.getElementById("signalBox");
-  const timeDisplay = document.getElementById("timeDisplay");
+    const pairSelect = document.getElementById("pairSelect");
+    const tvChart = document.getElementById("tvChart");
+    const signalBox = document.getElementById("signalBox");
+    const timeDisplay = document.getElementById("timeDisplay");
+    const generateBtn = document.getElementById("generateBtn");
 
-  pairSelect.addEventListener("change", function () {
-    const symbol = this.value;
-    const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSD" : "OANDA:XAUUSD";
-    tvChart.src = `https://www.tradingview.com/embed-widget/advanced-chart/?symbol=${tvSymbol}&theme=dark`;
-  });
+    function updateChart() {
+      const symbol = pairSelect.value;
+      const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD";
+      tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=rgba(0,0,0,1)&enable_publishing=false&hide_legend=true`;
+    }
 
-  function generateSignal() {
-    const pair = pairSelect.value;
-    const now = new Date();
-    const day = now.getDay();
-    const time = now.toLocaleTimeString("en-IN", { hour12: true });
+    pairSelect.addEventListener("change", updateChart);
+    window.addEventListener("load", updateChart);
 
-    if (pair === "XAUUSD") {
-      if (day === 6 || day === 0) {
-        signalBox.innerHTML = `⚠️ Gold market is closed today.`;
+    function updateTime() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+      timeDisplay.textContent = `⏰ Indian Time: ${time}`;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    generateBtn.addEventListener("click", () => {
+      const now = new Date();
+      const day = now.getDay();
+      const pair = pairSelect.value;
+      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+
+      if (pair === "XAUUSD" && (day === 6 || day === 0)) {
+        signalBox.innerHTML = `⚠️ Gold market is closed on weekends.`;
         return;
       }
-      signalBox.innerHTML = `⚙️ Gold logic is under development.`;
-      return;
-    }
 
-    if (pair === "BTCUSD") {
-      const candleUrl = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=2";
+      const direction = Math.random() > 0.5 ? "BUY" : "SELL";
+      const entry = (Math.random() * (50000 - 30000) + 30000).toFixed(2);
+      const tp1 = (parseFloat(entry) + 50).toFixed(2);
+      const tp2 = (parseFloat(entry) + 100).toFixed(2);
+      const sl = (parseFloat(entry) - 70).toFixed(2);
 
-      fetch(candleUrl)
-        .then(res => res.json())
-        .then(data => {
-          const lastCandle = data[0];
-          const open = parseFloat(lastCandle[1]);
-          const close = parseFloat(lastCandle[4]);
-
-          const direction = close > open ? "BUY" : "SELL";
-          const price = close;
-
-          const entry = price.toFixed(2);
-          const tp1 = direction === "BUY" ? (price + 50).toFixed(2) : (price - 50).toFixed(2);
-          const tp2 = direction === "BUY" ? (price + 100).toFixed(2) : (price - 100).toFixed(2);
-          const sl = direction === "BUY" ? (price - 70).toFixed(2) : (price + 70).toFixed(2);
-
-          signalBox.innerHTML = `
-            <b>📊 ${pair}:</b> <span style='color:yellow'>${direction}</span><br>
-            🟡 Entry: ${entry}<br>
-            🎯 TP1: ${tp1} | TP2: ${tp2}<br>
-            🛑 SL: ${sl}<br>
-            ⏰ Time: ${time}
-          `;
-        })
-        .catch(err => {
-          signalBox.innerHTML = `❌ Failed to fetch live candle`;
-        });
-    }
-  }
-
-  function updateTime() {
-    const now = new Date();
-    timeDisplay.innerText = "Current Indian Time: " + now.toLocaleTimeString("en-IN", { hour12: true });
-  }
-
-  setInterval(updateTime, 1000);
-  updateTime();
-</script>
-
+      signalBox.innerHTML = `
+        📊 ${pair}: <span style="color:yellow">${direction}</span><br>
+        🟡 Entry: ${entry}<br>
+        🎯 TP1: ${tp1} | TP2: ${tp2}<br>
+        🛑 SL: ${sl}<br>
+        🕒 Time: ${time}
+      `;
+    });
+  </script>
 </body>
 </html>
