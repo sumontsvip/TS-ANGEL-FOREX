@@ -1,20 +1,24 @@
-<!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
-  <title>TS Angel Forex AI</title>  
-  <style>  
-    html, body {  
-      margin: 0;  
-      padding: 0;  
-      overflow-x: hidden;  
-      font-family: 'Arial', sans-serif;  
-      color: white;  
-      background: black;  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS Angel Forex AI</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      font-family: 'Arial', sans-serif;
+      color: white;
+      background: black;
     }
     canvas#starfield {
-      position: fixed;  
-      top: 0; left: 0;  
-      width: 100%;  
-      height: 100%;  
-      z-index: -1;  
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
     }
     body {
       text-align: center;
@@ -76,70 +80,129 @@
       0%, 100% { box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
       50% { box-shadow: 0 0 5px #00ffe7, 0 0 10px #00ffe7; }
     }
-  </style>  
-</head>  
+  </style>
+</head>
 <body>
 <canvas id="starfield"></canvas>
-<h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>  
-<p id="timeDisplay">⏰ Current Indian Time: </p>  
-<select id="pairSelect">  
-  <option value="BTCUSD">BTCUSD</option>  
-  <option value="XAUUSD">XAUUSD</option>  
+<h1>🚀 TS Angel Forex AI (BTC & GOLD)</h1>
+<p id="timeDisplay">⏰ Current Indian Time: </p>
+<select id="pairSelect">
+  <option value="BTCUSD">BTCUSD</option>
+  <option value="XAUUSD">XAUUSD</option>
 </select>
-<button onclick="playClick(); generateSignal()">📡 Generate Signal</button>  
-<div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>  
-<iframe id="tvChart" allowfullscreen></iframe>  
-<div class="watermark">💡 Created by Trader Sumon</div>  
-<audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>  
+<button onclick="playClick(); generateSignal()">📡 Generate Signal</button>
+<div class="signal-box" id="signalBox">🔍 Waiting for signal...</div>
+<iframe id="tvChart"></iframe>
+<div class="watermark">💡 Created by Trader Sumon</div>
+<audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
+
 <script>
 const pairSelect = document.getElementById("pairSelect");
 const tvChart = document.getElementById("tvChart");
 const signalBox = document.getElementById("signalBox");
 const timeDisplay = document.getElementById("timeDisplay");
 const clickSound = document.getElementById("clickSound");
-let activeSignal = null;function speak(text) { const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'bn-IN'; // Bengali Voice speechSynthesis.speak(utterance); }
 
-function playClick() { clickSound.play(); }
+let activeSignal = null;
 
-pairSelect.addEventListener("change", function () { loadChart(); });
-
-function loadChart() { const symbol = pairSelect.value; const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD"; tvChart.src = https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&studies=[]&enable_publishing=false&hide_legend=false&save_image=true&toolbar_bg=black&allow_symbol_change=true&details=true&hotlist=true&calendar=true&drawings_access=all&enabled_features=drawings_toolbar; // manual + auto drawing enabled }
-
-async function fetchLivePrice(pair) { try { if (pair === "BTCUSD") { const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"); const data = await res.json(); return parseFloat(data.price); } else { const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d"); const data = await res.json(); return parseFloat(data.price); } } catch (error) { signalBox.innerHTML = "❌ Error fetching live price!"; console.error(error); return null; } }
-
-async function generateSignal() { const now = new Date(); const pair = pairSelect.value; const day = now.getDay(); const time = now.toLocaleTimeString("en-IN", { hour12: true });
-
-if (activeSignal) { const msg = "⏳ Wait: A signal is already active!"; signalBox.innerHTML = msg; speak(msg); return; }
-
-if ((pair === "XAUUSD") && (day === 6 || day === 0)) { const msg = "⚠️ Gold market is closed today."; signalBox.innerHTML = msg; speak("আজ গোল্ড মার্কেট বন্ধ আছে"); return; }
-
-const price = await fetchLivePrice(pair); if (!price) return;
-
-if (pair === "XAUUSD") { const dailyBias = price > 3350.5 ? "BUY" : "SELL"; const momentumSell = price < 3377.28; const momentumBuy = price > 3377.28; const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394]; const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
-
-if (!inZone) {
-  const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price}`;
-  signalBox.innerHTML = msg.replace(/\n/g, '<br>');
-  speak("একনো ট্রেড সেটআপ নেই, প্রাইস লেভেল এর কাছে না");
-  return;
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'bn-IN'; // Bangla voice
+  speechSynthesis.speak(utterance);
 }
 
-const direction = momentumSell ? "SELL" : "BUY";
-const entry = parseFloat(price.toFixed(2));
-const tp1 = direction === "BUY" ? (entry + 5).toFixed(2) : (entry - 5).toFixed(2);
-const tp2 = direction === "BUY" ? (entry + 10).toFixed(2) : (entry - 10).toFixed(2);
-const tp3 = direction === "BUY" ? (entry + 15).toFixed(2) : (entry - 15).toFixed(2);
-const sl = direction === "BUY" ? (entry - 4).toFixed(2) : (entry + 4).toFixed(2);
+function playClick() {
+  clickSound.play();
+}
 
-activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
+pairSelect.addEventListener("change", function () {
+  loadChart();
+});
 
-const signalText =
-  `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
+function loadChart() {
+  const symbol = pairSelect.value;
+  const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD";
+  tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&studies=[]&enabled_features=study_templates,drawingToolbar,edit_buttons_in_legend`;
+}
 
-signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
-speak(`${pair} ${direction}. এন্ট্রি ${entry}. টিপি ওয়ান ${tp1}, টিপি টু ${tp2}, এস এল ${sl}`);
+async function fetchLivePrice(pair) {
+  try {
+    if (pair === "BTCUSD") {
+      const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+      const data = await res.json();
+      return parseFloat(data.price);
+    } else {
+      const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d");
+      const data = await res.json();
+      return parseFloat(data.price);
+    }
+  } catch (error) {
+    signalBox.innerHTML = "❌ Error fetching live price!";
+    console.error(error);
+    return null;
+  }
+}
 
-} else { signalBox.innerHTML = "⚠️ BTC signal logic not updated yet."; speak("BTC এর লজিক এখনো আপডেট হয়নি"); } } </script>
+async function generateSignal() {
+  const now = new Date();
+  const pair = pairSelect.value;
+  const day = now.getDay();
+  const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
-</body>  
+  if (activeSignal) {
+    const msg = "⏳ Wait: A signal is already active!";
+    signalBox.innerHTML = msg;
+    speak("অপেক্ষা করুন, একটি ট্রেড ইতিমধ্যেই চলছে");
+    return;
+  }
+
+  if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+    const msg = "⚠️ Gold market is closed today.";
+    signalBox.innerHTML = msg;
+    speak("আজ গোল্ড মার্কেট বন্ধ আছে");
+    return;
+  }
+
+  const price = await fetchLivePrice(pair);
+  if (!price) return;
+
+  if (pair === "XAUUSD") {
+    const dailyBias = price > 3350.5 ? "BUY" : "SELL";
+    const momentumSell = price < 3377.28;
+    const momentumBuy = price > 3377.28;
+
+    const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394];
+    const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
+
+    if (!inZone) {
+      const msg = `❌ No valid trade setup now.<br>Price not near any key zone.<br>Current: ${price}`;
+      signalBox.innerHTML = msg;
+      speak("এখন কোন ট্রেড সেটআপ নেই। প্রাইস লেভেলের কাছে নয়।");
+      return;
+    }
+
+    const direction = momentumSell ? "SELL" : "BUY";
+    const entry = parseFloat(price.toFixed(2));
+    const tp1 = direction === "BUY" ? (entry + 5).toFixed(2) : (entry - 5).toFixed(2);
+    const tp2 = direction === "BUY" ? (entry + 10).toFixed(2) : (entry - 10).toFixed(2);
+    const tp3 = direction === "BUY" ? (entry + 15).toFixed(2) : (entry - 15).toFixed(2);
+    const sl = direction === "BUY" ? (entry - 4).toFixed(2) : (entry + 4).toFixed(2);
+
+    activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
+
+    const signalText =
+      `📊 ${pair}: ${direction}<br>⚙️ Mode: Intraday<br>🟡 Entry: ${entry}<br>🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}<br>🛑 SL: ${sl}<br>📍 Live Price: ${price}<br>📈 Trade is live...`;
+
+    signalBox.innerHTML = signalText;
+    speak(`${direction} ট্রেড চলছে। এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপলস ${sl}`);
+
+    // Auto Draw on Chart
+    tvChart.src += `&drawingObjects=[{"price":${entry},"label":"Entry"},{"price":${tp1},"label":"TP1"},{"price":${tp2},"label":"TP2"},{"price":${tp3},"label":"TP3"},{"price":${sl},"label":"SL"}]`;
+  } else {
+    signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
+    speak("বিটিসি লজিক এখনো অ্যাড করা হয়নি।");
+  }
+}
+</script>
+</body>
 </html>
