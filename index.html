@@ -106,13 +106,27 @@ let activeSignal = null;
 
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices();
-  const banglaVoice = voices.find(v => v.lang === "bn-IN" || v.lang === "bn");
-  utterance.lang = banglaVoice ? "bn-IN" : "en-IN";
-  utterance.voice = banglaVoice || null;
+  utterance.lang = 'bn-BD';
+
+  // Try to get Bengali female voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const bengaliVoice = voices.find(v =>
+    (v.lang === 'bn-BD' || v.lang.includes('bn')) &&
+    v.name.toLowerCase().includes('female')
+  );
+
+  if (bengaliVoice) {
+    utterance.voice = bengaliVoice;
+  } else {
+    // fallback: pick any Bengali voice
+    const anyBn = voices.find(v => v.lang === 'bn-BD' || v.lang.includes('bn'));
+    if (anyBn) {
+      utterance.voice = anyBn;
+    }
+  }
+
   speechSynthesis.speak(utterance);
 }
-
 function playClick() {
   clickSound.play();
 }
