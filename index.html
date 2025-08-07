@@ -197,8 +197,12 @@ async function generateSignal() {
     speak(`${direction} ট্রেড চলছে। এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপলস ${sl}`);
 
     // Auto Draw on Chart
-    tvChart.src += `&drawingObjects=[{"price":${entry},"label":"Entry"},{"price":${tp1},"label":"TP1"},{"price":${tp2},"label":"TP2"},{"price":${tp3},"label":"TP3"},{"price":${sl},"label":"SL"}]`;
-  } else {
+    // ... previous code unchanged ...
+signalBox.innerHTML = signalText;
+speak(`${direction} ট্রেড চলছে। এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপলস ${sl}`);
+
+// ✅ Fix: Reload the chart (no drawingObject support)
+loadChart();
     signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
     speak("বিটিসি লজিক এখনো অ্যাড করা হয়নি।");
   }
