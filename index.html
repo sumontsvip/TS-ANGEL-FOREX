@@ -1,230 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TS Angel Signal System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS Angel – Live Signal Bot</title>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background-color: black;
+      background-color: #000;
       color: #00ffe7;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-    #main {
-      position: relative;
-      z-index: 10;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
       padding: 20px;
     }
-    select, button {
-      font-size: 18px;
-      padding: 8px;
-      margin-right: 10px;
-    }
     #signalBox {
+      font-size: 18px;
+      padding: 15px;
+      border: 1px solid #00ffe7;
+      border-radius: 10px;
       margin-top: 20px;
-      font-size: 20px;
       white-space: pre-line;
     }
-    #timeDisplay {
-      margin-top: 10px;
-    }
-    canvas {
+    canvas#starfield {
       position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 1;
+      top: 0; left: 0;
+      z-index: -1;
+    }
+    iframe {
+      margin-top: 30px;
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
+  <h2>🌟 TS Angel V1.0 – Live Signal Bot</h2>
+  <select id="pairSelect">
+    <option value="XAUUSD">Gold (XAUUSD)</option>
+    <option value="BTCUSD">Bitcoin (BTCUSD)</option>
+  </select>
+  <button onclick="generateSignal()">🚀 Generate Signal</button>
+  <div id="signalBox">No signal yet.</div>
+  <div id="timeDisplay"></div>
   <canvas id="starfield"></canvas>
-  <div id="main">
-    <h2>📡 TS Angel Live Signal System</h2>
-    <select id="pairSelect">
-      <option value="XAUUSD">XAUUSD</option>
-      <option value="BTCUSD">BTCUSD</option>
-    </select>
-    <button onclick="generateSignal()">📈 Generate Signal</button>
-    <div id="signalBox">🔄 Waiting for signal...</div>
-    <div id="timeDisplay"></div>
-  </div>
+  <iframe src="https://www.tradingview.com/chart/" allowfullscreen></iframe>
 
-  <script>
-    let activeSignal = null;
-    const pairSelect = document.getElementById("pairSelect");
-    const signalBox = document.getElementById("signalBox");
-    const timeDisplay = document.getElementById("timeDisplay");
+<script>
+let activeSignal = null;
 
-    function speak(text) {
-      const synth = window.speechSynthesis;
-      const utter = new SpeechSynthesisUtterance(text);
-      const voices = synth.getVoices().filter(voice =>
-        voice.lang.includes("bn") || voice.name.toLowerCase().includes("bangla")
-      );
-      utter.voice = voices.length > 0 ? voices[0] : synth.getVoices()[0];
-      utter.rate = 0.9;
-      synth.speak(utter);
+const signalBox = document.getElementById("signalBox");
+const pairSelect = document.getElementById("pairSelect");
+const timeDisplay = document.getElementById("timeDisplay");
+
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "bn-BD"; // Bengali Female
+  msg.pitch = 1.2;
+  msg.rate = 1;
+  msg.volume = 1;
+  speechSynthesis.speak(msg);
+}
+
+async function fetchLivePrice(pair) {
+  try {
+    if (pair === "BTCUSD") {
+      const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+      const data = await res.json();
+      return parseFloat(data.price);
+    } else {
+      const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d");
+      const data = await res.json();
+      return parseFloat(data.price);
+    }
+  } catch (error) {
+    signalBox.innerHTML = "❌ Error fetching live price!";
+    console.error(error);
+    return null;
+  }
+}
+
+async function generateSignal() {
+  const now = new Date();
+  const pair = pairSelect.value;
+  const day = now.getDay();
+  const time = now.toLocaleTimeString("en-IN", { hour12: true });
+
+  if (activeSignal) {
+    const msg = "⏳ Wait: A signal is already active!";
+    signalBox.innerHTML = msg;
+    speak(msg);
+    return;
+  }
+
+  if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
+    const msg = "⚠️ Gold market is closed today.";
+    signalBox.innerHTML = msg;
+    speak("আজ গোল্ড মার্কেট বন্ধ আছে।");
+    return;
+  }
+
+  const price = await fetchLivePrice(pair);
+  if (!price) return;
+
+  if (pair === "XAUUSD") {
+    const dailyBias = price > 3350.5 ? "BUY" : "SELL";
+    const momentumSell = price < 3377.28;
+    const momentumBuy = price > 3377.28;
+    const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394];
+    const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
+
+    if (!inZone) {
+      const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price}`;
+      signalBox.innerHTML = msg.replace(/\n/g, '<br>');
+      speak("এখন কোনো ট্রেড লেভেল এর কাছে নেই। অপেক্ষা করুন।");
+      return;
     }
 
-    async function fetchLivePrice(pair) {
-      try {
-        if (pair === "BTCUSD") {
-          const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
-          const data = await res.json();
-          return parseFloat(data.price);
-        } else {
-          const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d");
-          const data = await res.json();
-          return parseFloat(data.price);
-        }
-      } catch (error) {
-        signalBox.innerHTML = "❌ Error fetching live price!";
-        console.error(error);
-        return null;
-      }
-    }
+    const direction = momentumSell ? "SELL" : "BUY";
+    const entry = parseFloat(price.toFixed(2));
+    const tp1 = direction === "BUY" ? (entry + 5).toFixed(2) : (entry - 5).toFixed(2);
+    const tp2 = direction === "BUY" ? (entry + 10).toFixed(2) : (entry - 10).toFixed(2);
+    const tp3 = direction === "BUY" ? (entry + 15).toFixed(2) : (entry - 15).toFixed(2);
+    const sl = direction === "BUY" ? (entry - 4).toFixed(2) : (entry + 4).toFixed(2);
 
-    async function generateSignal() {
-      const now = new Date();
-      const pair = pairSelect.value;
-      const day = now.getDay();
-      const time = now.toLocaleTimeString("en-IN", { hour12: true });
+    activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, status: "Running" };
 
-      if (activeSignal) {
-        const msg = "⏳ Wait: A signal is already active!";
-        signalBox.innerHTML = msg;
-        speak("একটা সিগনাল ইতিমধ্যেই চলছে।");
-        return;
-      }
+    const signalText =
+      `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
 
-      if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-        const msg = "⚠️ Gold market is closed today.";
-        signalBox.innerHTML = msg;
-        speak("গোল্ড মার্কেট আজ বন্ধ।");
-        return;
-      }
+    signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
+    speak(`${pair} ${direction}. Entry ${entry}. টিপি ও স্টপলস দেওয়া হয়েছে।`);
 
-      const price = await fetchLivePrice(pair);
-      if (!price) return;
+  } else {
+    signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
+    speak("BTC এর সিগন্যাল এখনো তৈরি হয়নি।");
+  }
+}
 
-      if (pair === "XAUUSD") {
-        const dailyBias = price > 3350.5 ? "BUY" : "SELL";
-        const momentumSell = price < 3377.28;
-        const momentumBuy = price > 3377.28;
-        const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394];
-        const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
+async function monitorSignal() {
+  if (!activeSignal) return;
 
-        if (!inZone) {
-          const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\n📍 Current: ${price}`;
-          signalBox.innerHTML = msg.replace(/\n/g, '<br>');
-          speak("এখন কোন ট্রেড নেওয়ার সুযোগ নেই। প্রাইস কোন লেভেলের কাছে নেই।");
-          return;
-        }
+  const livePrice = await fetchLivePrice(activeSignal.pair);
+  if (!livePrice) return;
 
-        const direction = momentumSell ? "SELL" : "BUY";
-        const entry = parseFloat(price.toFixed(2));
-        const tp1 = direction === "BUY" ? (entry + 5).toFixed(2) : (entry - 5).toFixed(2);
-        const tp2 = direction === "BUY" ? (entry + 10).toFixed(2) : (entry - 10).toFixed(2);
-        const tp3 = direction === "BUY" ? (entry + 15).toFixed(2) : (entry - 15).toFixed(2);
-        const sl = direction === "BUY" ? (entry - 4).toFixed(2) : (entry + 4).toFixed(2);
+  const { direction, tp1, tp2, tp3, sl, entry } = activeSignal;
+  const price = parseFloat(livePrice);
 
-        activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
+  const hit = (target) => direction === "BUY" ? price >= target : price <= target;
 
-        const signalText = `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
-        signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
-        speak(`${pair} ${direction}. এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপ লস ${sl}`);
+  if (hit(parseFloat(tp1)) && activeSignal.status === "Running") {
+    speak("🎯 টিপি ওয়ান হিট হয়েছে");
+    activeSignal.status = "TP1 Hit";
+  } else if (hit(parseFloat(tp2)) && activeSignal.status === "TP1 Hit") {
+    speak("🎯 টিপি টু হিট হয়েছে");
+    activeSignal.status = "TP2 Hit";
+  } else if (hit(parseFloat(tp3)) && activeSignal.status === "TP2 Hit") {
+    speak("🎯 টিপি থ্রি হিট হয়েছে। ট্রেড শেষ।");
+    activeSignal = null;
+    signalBox.innerHTML += "<br>✅ TP3 Hit. Signal closed.";
+  } else if ((direction === "BUY" && price <= parseFloat(sl)) || (direction === "SELL" && price >= parseFloat(sl))) {
+    speak("🛑 স্টপ লস হিট হয়েছে। ট্রেড বন্ধ।");
+    signalBox.innerHTML += "<br>❌ SL Hit. Signal closed.";
+    activeSignal = null;
+  }
+}
 
-        startLiveMonitoring();
-      } else {
-        signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
-        speak("বিটিসি লজিক এখনো বানানো হয়নি।");
-      }
-    }
+setInterval(() => {
+  monitorSignal();
+}, 10000);
 
-    function startLiveMonitoring() {
-      const interval = setInterval(async () => {
-        if (!activeSignal) {
-          clearInterval(interval);
-          return;
-        }
+setInterval(() => {
+  const now = new Date();
+  timeDisplay.innerText = "⏰ Current Indian Time: " + now.toLocaleTimeString("en-IN");
+}, 1000);
 
-        const price = await fetchLivePrice(activeSignal.pair);
-        if (!price) return;
+// Starfield animation
+const canvas = document.getElementById("starfield");
+const ctx = canvas.getContext("2d");
+let stars = [];
 
-        const entry = parseFloat(activeSignal.entry);
-        const tp1 = parseFloat(activeSignal.tp1);
-        const tp2 = parseFloat(activeSignal.tp2);
-        const tp3 = parseFloat(activeSignal.tp3);
-        const sl = parseFloat(activeSignal.sl);
-        const direction = activeSignal.direction;
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
 
-        let hitTarget = null;
+for (let i = 0; i < 200; i++) {
+  stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 1 });
+}
 
-        if (direction === "BUY") {
-          if (price >= tp3) hitTarget = "TP3";
-          else if (price >= tp2) hitTarget = "TP2";
-          else if (price >= tp1) hitTarget = "TP1";
-          else if (price <= sl) hitTarget = "SL";
-        } else {
-          if (price <= tp3) hitTarget = "TP3";
-          else if (price <= tp2) hitTarget = "TP2";
-          else if (price <= tp1) hitTarget = "TP1";
-          else if (price >= sl) hitTarget = "SL";
-        }
-
-        if (hitTarget) {
-          let msg = "";
-          if (hitTarget === "SL") {
-            msg = `🛑 SL Hit at ${price}!\n💔 Trade closed with loss.`;
-            speak("স্টপ লস হিট হয়েছে। ট্রেড শেষ।");
-          } else {
-            msg = `✅ ${hitTarget} Hit at ${price}!\n🎯 Trade completed in profit.`;
-            speak(`${hitTarget} হিট হয়েছে। ট্রেড লাভে শেষ হয়েছে।`);
-          }
-          signalBox.innerHTML = msg.replace(/\n/g, "<br>");
-          activeSignal = null;
-          clearInterval(interval);
-        }
-
-      }, 10000); // check every 10 seconds
-    }
-
-    // Clock
-    setInterval(() => {
-      const now = new Date();
-      timeDisplay.innerText = "⏰ Current Indian Time: " + now.toLocaleTimeString("en-IN");
-    }, 1000);
-
-    // Starfield animation
-    const canvas = document.getElementById("starfield");
-    const ctx = canvas.getContext("2d");
-    let stars = [];
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    resizeCanvas();
-
-    for (let i = 0; i < 200; i++) {
-      stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 1 });
-    }
-
-    function animateStars() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#00ffe7";
-      stars.forEach(star => {
-        star.y += star.speed;
-        if (star.y > canvas.height) star.y = 0;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
-        ctx.fill();
-      });
-      requestAnimationFrame(animateStars);
-    }
-    animateStars();
-  </script>
+function animateStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#00ffe7";
+  stars.forEach(star => {
+    star.y += star.speed;
+    if (star.y > canvas.height) star.y = 0;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+  requestAnimationFrame(animateStars);
+}
+animateStars();
+</script>
 </body>
 </html>
