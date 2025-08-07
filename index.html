@@ -124,7 +124,7 @@ pairSelect.addEventListener("change", function () {
 function loadChart() {
   const symbol = pairSelect.value;
   const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD";
-  tvChart.src = https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&studies=[]&toolbarbg=rgba(0,0,0,1)&hide_side_toolbar=0&allow_symbol_change=1&saveimage=1&details=1&hotlist=1&calendar=1&drawings_access=%7B%22type%22%3A%22black%22%7D;
+  tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&studies=[]&toolbarbg=rgba(0,0,0,1)&hide_side_toolbar=0&allow_symbol_change=1&saveimage=1&details=1&hotlist=1&calendar=1&drawings_access=%7B%22type%22%3A%22black%22%7D`;
 }
 
 async function fetchLivePrice(pair) {
@@ -176,7 +176,7 @@ async function generateSignal() {
     const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
 
     if (!inZone) {
-      const msg = ❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price};
+      const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price}`;
       signalBox.innerHTML = msg.replace(/\n/g, '<br>');
       speak("No trade now. Price not near level zone.");
       return;
@@ -192,10 +192,10 @@ async function generateSignal() {
     activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
 
     const signalText =
-      📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...;
+      `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
 
     signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
-    speak(${pair} ${direction}. Entry ${entry}. TP1 ${tp1}, TP2 ${tp2}, SL ${sl});
+    speak(`${pair} ${direction}. Entry ${entry}. TP1 ${tp1}, TP2 ${tp2}, SL ${sl}`);
   } else {
     signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
     speak("BTC logic coming soon.");
