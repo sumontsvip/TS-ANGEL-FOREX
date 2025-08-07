@@ -2,63 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TS Angel Signal Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS Angel Realtime Bot</title>
   <style>
     body {
       margin: 0;
-      padding: 0;
-      background: black;
-      color: white;
       font-family: Arial, sans-serif;
+      background: black;
+      color: #00ffe7;
       text-align: center;
     }
-    canvas {
+    #starfield {
       position: fixed;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       z-index: -1;
     }
     #signalBox {
-      font-size: 1.2em;
       padding: 20px;
-      margin-top: 80px;
-    }
-    select, button {
-      font-size: 16px;
-      padding: 8px;
-      margin: 5px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-
-<canvas id="starfield"></canvas>
-
-<h2>💎 TS Angel Signal Panel 💎</h2>
-
-<select id="pairSelect">
-  <option value="XAUUSD">XAU/USD (Gold)</option>
-  <option value="BTCUSD">BTC/USD</option>
-</select>
-
-<button onclick="generateSignal()">🔔 Generate Signal</button>
-
-<div id="signalBox">📡 Signal will appear here.</div>
-<div id="timeDisplay"></div>
+  <canvas id="starfield"></canvas>
+  <h1>📡 TS Angel: Realtime Signal Bot</h1>
+  <select id="pairSelect">
+    <option value="XAUUSD">Gold (XAUUSD)</option>
+    <option value="BTCUSD">Bitcoin (BTCUSD)</option>
+  </select>
+  <br><br>
+  <button onclick="generateSignal()">📊 Generate Signal</button>
+  <div id="signalBox">🔔 Awaiting Signal...</div>
+  <div id="timeDisplay" style="margin-top: 15px;"></div>
 
 <script>
 let activeSignal = null;
-const pairSelect = document.getElementById("pairSelect");
 const signalBox = document.getElementById("signalBox");
-const timeDisplay = document.getElementById("timeDisplay");
+const pairSelect = document.getElementById("pairSelect");
 
 function speak(text) {
+  const synth = window.speechSynthesis;
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "bn-BD";
-  utter.pitch = 1.1;
-  utter.rate = 0.92;
-  utter.voice = speechSynthesis.getVoices().find(v => v.name.toLowerCase().includes("female")) || null;
-  speechSynthesis.speak(utter);
+  utter.lang = "bn-BD"; // Bengali
+  utter.pitch = 1.2;
+  utter.rate = 1;
+  utter.volume = 1;
+  // Try female voice
+  const female = synth.getVoices().find(v => v.lang.startsWith("bn") && v.name.toLowerCase().includes("female"));
+  if (female) utter.voice = female;
+  synth.speak(utter);
 }
 
 async function fetchLivePrice(pair) {
@@ -86,16 +79,16 @@ async function generateSignal() {
   const time = now.toLocaleTimeString("en-IN", { hour12: true });
 
   if (activeSignal) {
-    const msg = "⏳ একটা সিগন্যাল লাইভ আছে, দয়া করে অপেক্ষা করুন।";
+    const msg = "⏳ Wait: A signal is already active!";
     signalBox.innerHTML = msg;
     speak(msg);
     return;
   }
 
   if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
-    const msg = "⚠️ আজ গোল্ড মার্কেট বন্ধ আছে।";
+    const msg = "⚠️ Gold market is closed today.";
     signalBox.innerHTML = msg;
-    speak("আজ গোল্ড মার্কেট বন্ধ আছে।");
+    speak("Gold market is closed today");
     return;
   }
 
@@ -103,14 +96,16 @@ async function generateSignal() {
   if (!price) return;
 
   if (pair === "XAUUSD") {
+    const dailyBias = price > 3350.5 ? "BUY" : "SELL";
     const momentumSell = price < 3377.28;
+    const momentumBuy = price > 3377.28;
     const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394];
     const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
 
     if (!inZone) {
-      const msg = `❌ এখন ট্রেডের জন্য ভালো সেটআপ নেই।\nকারণ দাম কোনো গুরুত্বপূর্ণ লেভেলের কাছে নেই।\nবর্তমান দাম: ${price}`;
+      const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price}`;
       signalBox.innerHTML = msg.replace(/\n/g, '<br>');
-      speak("এখন ট্রেডের ভালো সেটআপ নেই।");
+      speak("No trade now. Price not near level zone.");
       return;
     }
 
@@ -123,43 +118,48 @@ async function generateSignal() {
 
     activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
 
-    const signalText = `📊 ${pair}: ${direction}\n⚙️ মোড: Intraday\n🟡 এন্ট্রি: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 লাইভ প্রাইস: ${price}\n📈 ট্রেড চলছে...`;
+    const signalText =
+      `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
 
     signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
-    speak(`${pair} ${direction}. এন্ট্রি ${entry}. টিপি ওয়ান ${tp1}, এস এল ${sl}`);
+    speak(`${pair} ${direction}. Entry ${entry}. TP1 ${tp1}, TP2 ${tp2}, SL ${sl}`);
   } else {
-    signalBox.innerHTML = "⚠️ BTC সিগন্যাল লজিক এখনো আপডেট হয়নি।";
-    speak("BTC লজিক এখনো আসেনি।");
+    signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
+    speak("BTC logic coming soon.");
   }
 }
 
-// Real-Time Monitoring Every 10 Seconds
+// ✅ Realtime Monitoring
 setInterval(async () => {
   if (!activeSignal) return;
 
   const price = await fetchLivePrice(activeSignal.pair);
   if (!price) return;
 
-  const { entry, tp1, tp2, tp3, sl, direction } = activeSignal;
+  const { direction, entry, tp1, tp2, tp3, sl } = activeSignal;
+  const hitTP1 = direction === "BUY" ? price >= tp1 : price <= tp1;
+  const hitTP2 = direction === "BUY" ? price >= tp2 : price <= tp2;
+  const hitTP3 = direction === "BUY" ? price >= tp3 : price <= tp3;
+  const hitSL = direction === "BUY" ? price <= sl : price >= sl;
 
-  if (
-    (direction === "BUY" && price >= tp1) ||
-    (direction === "SELL" && price <= tp1)
-  ) {
-    speak("🎉 টিপি ওয়ান হিট হয়েছে!");
+  if (hitTP3) {
+    speak("TP3 hit. Trade closed.");
+    signalBox.innerHTML += "<br>✅ TP3 Hit!";
     activeSignal = null;
-    signalBox.innerHTML = "✅ TP1 হিট হয়েছে। নতুন সিগন্যালের জন্য প্রস্তুত।";
-  } else if (
-    (direction === "BUY" && price <= sl) ||
-    (direction === "SELL" && price >= sl)
-  ) {
-    speak("⚠️ ট্রেডে লস হয়েছে, এস এল হিট করেছে।");
+  } else if (hitTP2) {
+    speak("TP2 hit. Trade active.");
+    signalBox.innerHTML += "<br>✅ TP2 Hit!";
+  } else if (hitTP1) {
+    speak("TP1 hit. Risk free now.");
+    signalBox.innerHTML += "<br>✅ TP1 Hit!";
+  } else if (hitSL) {
+    speak("Stop Loss hit.");
+    signalBox.innerHTML += "<br>❌ SL Hit!";
     activeSignal = null;
-    signalBox.innerHTML = "❌ SL হিট হয়েছে। সাবধানে থাকুন।";
   }
-}, 10000);
+}, 10000); // Every 10 sec
 
-// Starfield Animation
+// Starfield animation
 const canvas = document.getElementById("starfield");
 const ctx = canvas.getContext("2d");
 let stars = [];
@@ -190,7 +190,7 @@ animateStars();
 
 setInterval(() => {
   const now = new Date();
-  timeDisplay.innerText = "⏰ Indian Time: " + now.toLocaleTimeString("en-IN");
+  timeDisplay.innerText = "⏰ Current Indian Time: " + now.toLocaleTimeString("en-IN");
 }, 1000);
 </script>
 </body>
