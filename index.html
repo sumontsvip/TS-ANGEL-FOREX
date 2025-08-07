@@ -102,12 +102,14 @@ const tvChart = document.getElementById("tvChart");
 const signalBox = document.getElementById("signalBox");
 const timeDisplay = document.getElementById("timeDisplay");
 const clickSound = document.getElementById("clickSound");
-
 let activeSignal = null;
 
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'bn-IN'; // Bangla voice
+  const voices = speechSynthesis.getVoices();
+  const banglaVoice = voices.find(v => v.lang === "bn-IN" || v.lang === "bn");
+  utterance.lang = banglaVoice ? "bn-IN" : "en-IN";
+  utterance.voice = banglaVoice || null;
   speechSynthesis.speak(utterance);
 }
 
@@ -119,10 +121,16 @@ pairSelect.addEventListener("change", function () {
   loadChart();
 });
 
-function loadChart() {
+function loadChart(entry = null, sl = null, tp1 = null, tp2 = null, tp3 = null) {
   const symbol = pairSelect.value;
   const tvSymbol = symbol === "BTCUSD" ? "BINANCE:BTCUSDT" : "OANDA:XAUUSD";
-  tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&studies=[]&enabled_features=study_templates,drawingToolbar,edit_buttons_in_legend`;
+  let url = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${tvSymbol}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata`;
+
+  if (entry && sl && tp1 && tp2 && tp3) {
+    url += `&studies=Horizontal Line@tv-basicstudies&drawings=%5B%7B"price":${entry},"color":"green"%7D,%7B"price":${sl},"color":"red"%7D,%7B"price":${tp1},"color":"yellow"%7D,%7B"price":${tp2},"color":"orange"%7D,%7B"price":${tp3},"color":"lime"%7D%5D`;
+  }
+
+  tvChart.src = url;
 }
 
 async function fetchLivePrice(pair) {
@@ -152,14 +160,14 @@ async function generateSignal() {
   if (activeSignal) {
     const msg = "⏳ Wait: A signal is already active!";
     signalBox.innerHTML = msg;
-    speak("অপেক্ষা করুন, একটি ট্রেড ইতিমধ্যেই চলছে");
+    speak("একটি ট্রেড ইতিমধ্যেই চলছে। অনুগ্রহ করে অপেক্ষা করুন।");
     return;
   }
 
   if ((pair === "XAUUSD") && (day === 6 || day === 0)) {
     const msg = "⚠️ Gold market is closed today.";
     signalBox.innerHTML = msg;
-    speak("আজ গোল্ড মার্কেট বন্ধ আছে");
+    speak("আজ গোল্ড মার্কেট বন্ধ আছে।");
     return;
   }
 
@@ -170,14 +178,13 @@ async function generateSignal() {
     const dailyBias = price > 3350.5 ? "BUY" : "SELL";
     const momentumSell = price < 3377.28;
     const momentumBuy = price > 3377.28;
-
     const entryZones = momentumSell ? [3372, 3370, 3365, 3360, 3356, 3351] : [3381, 3385, 3389, 3394];
     const inZone = entryZones.some(level => Math.abs(price - level) <= 0.5);
 
     if (!inZone) {
-      const msg = `❌ No valid trade setup now.<br>Price not near any key zone.<br>Current: ${price}`;
-      signalBox.innerHTML = msg;
-      speak("এখন কোন ট্রেড সেটআপ নেই। প্রাইস লেভেলের কাছে নয়।");
+      const msg = `❌ No valid trade setup now.\nPrice not near any key zone.\nCurrent: ${price}`;
+      signalBox.innerHTML = msg.replace(/\n/g, '<br>');
+      speak("এখন কোনো ট্রেড সেটআপ নেই। দাম কোন জোনে নেই।");
       return;
     }
 
@@ -191,20 +198,14 @@ async function generateSignal() {
     activeSignal = { pair, direction, entry, tp1, tp2, tp3, sl, time, mode: "Intraday", status: "Running" };
 
     const signalText =
-      `📊 ${pair}: ${direction}<br>⚙️ Mode: Intraday<br>🟡 Entry: ${entry}<br>🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}<br>🛑 SL: ${sl}<br>📍 Live Price: ${price}<br>📈 Trade is live...`;
+      `📊 ${pair}: ${direction}\n⚙️ Mode: Intraday\n🟡 Entry: ${entry}\n🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}\n🛑 SL: ${sl}\n📍 Live Price: ${price}\n📈 Trade is live...`;
 
-    signalBox.innerHTML = signalText;
-    speak(`${direction} ট্রেড চলছে। এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপলস ${sl}`);
-
-    // Auto Draw on Chart
-    // ... previous code unchanged ...
-signalBox.innerHTML = signalText;
-speak(`${direction} ট্রেড চলছে। এন্ট্রি ${entry}, টি পি ওয়ান ${tp1}, স্টপলস ${sl}`);
-
-// ✅ Fix: Reload the chart (no drawingObject support)
-loadChart();
+    signalBox.innerHTML = signalText.replace(/\n/g, "<br>");
+    speak(`${pair} ${direction} ট্রেড। এন্ট্রি ${entry}. টার্গেট ${tp1}, ${tp2}, স্টপলস ${sl}`);
+    loadChart(entry, sl, tp1, tp2, tp3);
+  } else {
     signalBox.innerHTML = "⚠️ BTC signal logic not updated yet.";
-    speak("বিটিসি লজিক এখনো অ্যাড করা হয়নি।");
+    speak("বিটিসি সিগন্যাল এখনো আপডেট হয়নি।");
   }
 }
 </script>
