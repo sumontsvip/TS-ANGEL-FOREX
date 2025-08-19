@@ -61,9 +61,31 @@ let activeSignal   = null;
 let pendingTimer   = null;
 let autoMonitorId  = null;
 
+/* ================= PERSISTED STATS (daily/session counters) ================= */
+// MODIFIED: added persistent trade stats to enforce daily/session limits and min trades fallback
+const STATS_KEY = "ts_angel_trade_stats_v1";
+function loadStats(){
+  try{
+    const raw = localStorage.getItem(STATS_KEY);
+    if(!raw) return createEmptyStats();
+    const obj = JSON.parse(raw);
+    // reset if date changed
+    const today = getISTDateString(new Date());
+    if(obj.date !== today) return createEmptyStats();
+    return obj;
+  }catch(e){ return createEmptyStats(); }
+}
+function createEmptyStats(){
+  const today = getISTDateString(new Date());
+  return { date: today, total: 0, perSession: { ASIA:0, LONDON:0, NEWYORK:0 }, perPair: {} };
+}
+function saveStats(s){ localStorage.setItem(STATS_KEY, JSON.stringify(s)); }
+let tradeStats = loadStats();
+
 /* ================= CONFIG =================
   Uses your gold logic; BTC & USOIL copy gold-style with pair specific zones/tolerance.
   Replace TwelveData API key if you have another one.
+  MODIFIED: added min/max trades and early-entry tolerance settings
 */
 const CONFIG = {
   XAUUSD: {
@@ -84,7 +106,13 @@ const CONFIG = {
     },
     tps: {tp1:5,tp2:10,tp3:15},
     slGap:4,
-    digits:2
+    digits:2,
+    // new
+    minTradesPerDay: 1,
+    maxTradesPerDay: 3,
+    maxTradesPerSession: 1,
+    earlyEntryPips: 7, // gold in pips-ish units
+    earlyEntryPercent: 0.15
   },
   BTCUSD: {
     tv: "BINANCE:BTCUSDT",
@@ -107,7 +135,13 @@ const CONFIG = {
     },
     tps: {tp1:100,tp2:200,tp3:300},
     slGap:80,
-    digits:2
+    digits:2,
+    // new
+    minTradesPerDay: 1,
+    maxTradesPerDay: 3,
+    maxTradesPerSession: 1,
+    earlyEntryPips: 150, // BTC: use pips/units
+    earlyEntryPercent: 0.20
   },
   USOIL: {
     tv: "TVC:USOIL",
@@ -138,7 +172,13 @@ const CONFIG = {
     },
     tps: {tp1:0.5,tp2:1.0,tp3:1.5},
     slGap:0.4,
-    digits:2
+    digits:2,
+    // new
+    minTradesPerDay: 1,
+    maxTradesPerDay: 3,
+    maxTradesPerSession: 1,
+    earlyEntryPips: 0.5,
+    earlyEntryPercent: 0.20
   }
 };
 
@@ -172,12 +212,42 @@ function renderLevelsClickable(levels,digits=2){
   if(!levels||!levels.length) return "";
   return `<div class="levels">LEVELS: ${levels.map(l => `<a onclick="tapLevel(${l})">${fmt(l,digits)}</a>`).join(" ")}</div>`;
 }
+function getISTDateString(d){
+  // returns YYYY-MM-DD in IST timezone
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(utc + istOffset);
+  return ist.toISOString().split('T')[0];
+}
+function getSessionName(date){
+  // date is JS Date (local). Convert to IST hour and choose session window.
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(utc + istOffset);
+  const h = ist.getHours();
+  // ASIA: 00:00 - 08:59, LONDON: 09:00 - 16:59, NEWYORK: 17:00 - 23:59
+  if(h >= 0 && h <= 8) return "ASIA";
+  if(h >= 9 && h <= 16) return "LONDON";
+  return "NEWYORK";
+}
 
 /* ================= MANUAL TAP ================= */
 async function tapLevel(level){
+  // MODIFIED: session/daily checks before allowing manual tap
   if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
   const pair = pairSelect.value;
   const cfg  = CONFIG[pair];
+  const session = getSessionName(new Date());
+  // session/day counters
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`); speak("Session limit reached");
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay){
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED."); speak("Daily maximum trades reached");
+    return;
+  }
+
   let price;
   try{ price = await cfg.fetch(); } catch(e){ renderSignalUpper("❌ ERROR FETCHING LIVE PRICE!"); return; }
   const direction = (price < cfg.pivot) ? "SELL" : "BUY";
@@ -188,6 +258,11 @@ async function tapLevel(level){
   const sl  = direction==="BUY" ? fmt(level-cfg.slGap,cfg.digits) : fmt(level+cfg.slGap,cfg.digits);
   const time= new Date().toLocaleTimeString("en-IN",{hour12:true});
   activeSignal = {pair,direction,entry,tp1,tp2,tp3,sl,time,mode:"MANUAL-TAP",status:"RUNNING"};
+  // update counters
+  tradeStats.total += 1;
+  tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
+  tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
+  saveStats(tradeStats); // persist
   const txt =
 `📊 ${pair}: ${direction}
 ⚙️ MODE: MANUAL-TAP
@@ -218,22 +293,81 @@ function getSetup(pair,price){
   const tp2 = direction==="BUY" ? fmt(Number(entry)+cfg.tps.tp2,cfg.digits) : fmt(Number(entry)-cfg.tps.tp2,cfg.digits);
   const tp3 = direction==="BUY" ? fmt(Number(entry)+cfg.tps.tp3,cfg.digits) : fmt(Number(entry)-cfg.tps.tp3,cfg.digits);
   const sl  = direction==="BUY" ? fmt(Number(entry)-cfg.slGap,cfg.digits) : fmt(Number(entry)+cfg.slGap,cfg.digits);
-  return {direction,entryZones,inZone,entry,tp1,tp2,tp3,sl};
+  return {direction,entryZones,inZone,entry,tp1,tp2,tp3,sl,nearest};
 }
 
 /* ================= MANUAL GENERATE BUTTON ================= */
 async function generateSignal(){
+  // MODIFIED: added daily/session checks + soft/early-entry fallback
   const now = new Date();
   const pair = pairSelect.value;
   const day  = now.getDay();
   const time = now.toLocaleTimeString("en-IN",{hour12:true});
+
+  // gold weekend check (original)
   if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); speak("Gold market is closed today"); return; }
   if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
+
+  // enforce daily reset if needed
+  if(tradeStats.date !== getISTDateString(new Date())) {
+    tradeStats = createEmptyStats();
+    saveStats(tradeStats);
+  }
+
+  const session = getSessionName(new Date());
+  const cfg = CONFIG[pair];
+
+  // session/day limits
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`);
+    speak("Session limit reached");
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay){
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED.");
+    speak("Daily maximum trades reached");
+    return;
+  }
 
   const price = await fetchLivePrice(pair);
   if(!price) return;
   const s = getSetup(pair,price);
-  if(!s.inZone){
+
+  // if in zone -> normal execution
+  if(s.inZone){
+    executeAndRecordAutoOrManual(pair, s, price, "INTRADAY");
+    return;
+  }
+
+  // NOT in zone: check early-entry tolerance (softening)
+  let allowEarly = false;
+  let earlyReason = "";
+  // compute distance
+  const nearest = s.nearest ?? price;
+  const diff = Math.abs(price - nearest);
+  // For FX (USOIL, XAU) use earlyEntryPips; for BTC use percent or pips depending on config values
+  if(cfg.earlyEntryPips && diff <= cfg.earlyEntryPips){
+    allowEarly = true;
+    earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
+  } else if(cfg.earlyEntryPercent){
+    const pct = (diff/price)*100;
+    if(pct <= cfg.earlyEntryPercent){
+      allowEarly = true;
+      earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
+    }
+  }
+
+  // Fallback: if daily trades < minTradesPerDay, be more lenient and allow early entry up to 2x tolerance
+  if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
+    const extendedTol = (cfg.earlyEntryPips || (price*cfg.earlyEntryPercent/100)) * 2;
+    const diff2 = Math.abs(price - nearest);
+    if(diff2 <= extendedTol){
+      allowEarly = true;
+      earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
+    }
+  }
+
+  if(!allowEarly){
     const msg =
 `❌ NO VALID TRADE SETUP NOW.
 PRICE NOT NEAR ANY KEY ZONE.
@@ -244,17 +378,64 @@ ${renderLevelsClickable(s.entryZones, CONFIG[pair].digits)}`;
     return;
   }
 
-  activeSignal = {pair,direction:s.direction,entry:s.entry,tp1:s.tp1,tp2:s.tp2,tp3:s.tp3,sl:s.sl,time,mode:"INTRADAY",status:"RUNNING"};
-  const text =
-`📊 ${pair}: ${s.direction}
-⚙️ MODE: INTRADAY
-🟡 ENTRY: ${s.entry}
-🎯 TP1: ${s.tp1} | TP2: ${s.tp2} | TP3: ${s.tp3}
-🛑 SL: ${s.sl}
-📍 LIVE PRICE: ${fmt(price, CONFIG[pair].digits)}
-📈 TRADE IS LIVE...`;
-  renderSignalUpper(text);
-  speak(`${pair} ${s.direction}. Entry ${s.entry}. TP1 ${s.tp1}, TP2 ${s.tp2}, SL ${s.sl}`);
+  // Early entry accepted — craft EARLY / REDUCED-RISK signal
+  const earlyEntryObj = Object.assign({}, s);
+  // mark entry as current nearest (but note reduced risk in message)
+  earlyEntryObj.entry = fmt(s.nearest ?? price, cfg.digits);
+  executeAndRecordAutoOrManual(pair, earlyEntryObj, price, "EARLY (REDUCED RISK)", earlyReason);
+}
+
+/* ================= EXECUTION & RECORDING (shared) ================= */
+// MODIFIED: centralize execution and update counters
+function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", extraNote=""){
+  if(activeSignal) return; // safety
+  const cfg = CONFIG[pair];
+  const session = getSessionName(new Date());
+  // final safety checks for limits
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) {
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`);
+    speak("Session limit reached");
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay) {
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED.");
+    speak("Daily maximum trades reached");
+    return;
+  }
+
+  const time = new Date().toLocaleTimeString("en-IN",{hour12:true});
+  activeSignal = {
+    pair,
+    direction: setupObj.direction,
+    entry: setupObj.entry,
+    tp1: setupObj.tp1,
+    tp2: setupObj.tp2,
+    tp3: setupObj.tp3,
+    sl: setupObj.sl,
+    time,
+    mode,
+    status: "RUNNING",
+    note: extraNote
+  };
+
+  // update counters and persist
+  tradeStats.total += 1;
+  tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
+  tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
+  saveStats(tradeStats);
+
+  // message formatting: include extra note for EARLY
+  const noteLine = extraNote ? `\nNOTE: ${extraNote}` : "";
+  const execText = `📊 ${pair}: ${setupObj.direction}
+⚙️ MODE: ${mode}
+🟡 ENTRY: ${setupObj.entry}
+🎯 TP1: ${setupObj.tp1} | TP2: ${setupObj.tp2} | TP3: ${setupObj.tp3}
+🛑 SL: ${setupObj.sl}
+📍 LIVE PRICE: ${fmt(livePrice, CONFIG[pair].digits)}
+📈 TRADE IS LIVE...${noteLine}`;
+  renderSignalUpper(execText);
+  // voice: keep it concise
+  speak(`${pair} ${setupObj.direction}. Entry ${setupObj.entry}. TP1 ${setupObj.tp1}, SL ${setupObj.sl}`);
 }
 
 /* ================= AUTO MONITOR (1MIN) + 10MIN CONFIRM ================= */
@@ -262,10 +443,24 @@ const MONITOR_EVERY_MS = 60_000;
 const AUTO_DELAY_MS = 10 * 60_000;
 
 async function autoMonitorTick(){
+  // MODIFIED: added session/daily checks before pending/execution; uses same early-entry fallback logic as manual
   if(activeSignal) return;
   const pair = pairSelect.value;
   const day = new Date().getDay();
   if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); return; }
+  // reset daily stats if date changed
+  if(tradeStats.date !== getISTDateString(new Date())){ tradeStats = createEmptyStats(); saveStats(tradeStats); }
+
+  const cfg = CONFIG[pair];
+  const session = getSessionName(new Date());
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) {
+    // nothing to do this session
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay) {
+    return;
+  }
+
   let price = null;
   try{ price = await fetchLivePrice(pair); } catch(e){}
   if(!price) return;
@@ -295,28 +490,47 @@ DETECTED AT: ${nowStr}`;
 
   pendingTimer = setTimeout(async ()=>{
     if(activeSignal) return;
+    // re-check counters (maybe user hit limits meanwhile)
+    if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { pendingTimer = null; return; }
+    if(tradeStats.total >= cfg.maxTradesPerDay) { pendingTimer = null; return; }
+
     let rePrice = null;
     try{ rePrice = await fetchLivePrice(pair); } catch(e){}
     if(!rePrice) return;
     const re = getSetup(pair,rePrice);
     if(re.inZone){
-      const time = new Date().toLocaleTimeString("en-IN",{hour12:true});
-      activeSignal = {pair,direction:re.direction,entry:re.entry,tp1:re.tp1,tp2:re.tp2,tp3:re.tp3,sl:re.sl,time,mode:"AUTO",status:"RUNNING"};
-      const execText = `📊 ${pair}: ${re.direction}
-⚙️ MODE: AUTO
-🟡 ENTRY: ${re.entry}
-🎯 TP1: ${re.tp1} | TP2: ${re.tp2} | TP3: ${re.tp3}
-🛑 SL: ${re.sl}
-📍 LIVE PRICE: ${fmt(rePrice, CONFIG[pair].digits)}
-✅ AUTO-EXECUTED AFTER 10 MINUTES`;
-      renderSignalUpper(execText);
-      speak(`${pair} ${re.direction}. Entry ${re.entry}. TP1 ${re.tp1}, TP2 ${re.tp2}, SL ${re.sl}`);
+      executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO");
     } else {
-      const cancelText = `${baseHeader}
+      // If not in zone after 10min, see if early-entry fallback should apply (same logic as generateSignal)
+      const nearest = re.nearest ?? rePrice;
+      const diff = Math.abs(rePrice - nearest);
+      let allowEarly = false;
+      let earlyReason = "";
+      if(cfg.earlyEntryPips && diff <= cfg.earlyEntryPips){
+        allowEarly = true; earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
+      } else if(cfg.earlyEntryPercent){
+        const pct = (diff/rePrice)*100;
+        if(pct <= cfg.earlyEntryPercent){
+          allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
+        }
+      }
+      if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
+        const extendedTol = (cfg.earlyEntryPips || (rePrice*cfg.earlyEntryPercent/100)) * 2;
+        const diff2 = Math.abs(rePrice - nearest);
+        if(diff2 <= extendedTol){
+          allowEarly = true; earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
+        }
+      }
+
+      if(allowEarly){
+        executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO-EARLY", earlyReason);
+      } else {
+        const cancelText = `${baseHeader}
 SETUP INVALID AFTER 10 MINUTES — AUTO EXECUTION CANCELLED
 ${renderLevelsClickable(re.entryZones, CONFIG[pair].digits)}`;
-      signalBox.innerHTML = cancelText.toUpperCase().replace(/\n/g,"<br>");
-      speak("Setup cancelled after recheck.");
+        signalBox.innerHTML = cancelText.toUpperCase().replace(/\n/g,"<br>");
+        speak("Setup cancelled after recheck.");
+      }
     }
     pendingTimer = null;
   }, AUTO_DELAY_MS);
@@ -342,6 +556,9 @@ handleModeChange();
 function resetSignal(){
   if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
   activeSignal = null;
+  // optionally reset counters (left as-is): keep daily counters; if you want to clear counts too, uncomment next lines
+  // tradeStats = createEmptyStats();
+  // saveStats(tradeStats);
   renderSignalUpper("🔄 RESET DONE. WAITING FOR SIGNAL...");
   speak("Reset done");
 }
