@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TS Angel Forex AI — Full</title>
+  <title>TS Angel Forex AI TEST VERSION — Full</title>
   <style>
     html,body{margin:0;padding:0;overflow-x:hidden;font-family:Arial,sans-serif;background:black;color:white;text-transform:uppercase}
     canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1}
@@ -26,7 +26,7 @@
 </head>
 <body>
   <canvas id="starfield"></canvas>
-  <h1>🚀 TS ANGEL FOREX AI (TEST VERSION)</h1>
+  <h1>🚀 TS ANGEL FOREX AI TEST VERSION</h1>
   <p id="timeDisplay">⏰ CURRENT INDIAN TIME:</p>
 
   <div class="bar">
@@ -69,9 +69,10 @@ const midnightToast= document.getElementById("midnightToast");
 let activeSignal   = null;
 let pendingTimer   = null;
 let autoMonitorId  = null;
+/* MODIFIED: active trade persistence */
+const ACTIVE_KEY = "ts_angel_active_trade_v1";
 
 /* ================= PERSISTED STATS (daily/session counters) ================= */
-// MODIFIED: added persistent trade stats to enforce daily/session limits and min trades fallback
 const STATS_KEY = "ts_angel_trade_stats_v1";
 const SUMMARY_KEY = "ts_angel_daily_summaries_v1"; // last 7 days
 function loadStats(){
@@ -79,7 +80,6 @@ function loadStats(){
     const raw = localStorage.getItem(STATS_KEY);
     if(!raw) return createEmptyStats();
     const obj = JSON.parse(raw);
-    // reset if date changed
     const today = getISTDateString(new Date());
     if(obj.date !== today) return createEmptyStats();
     return obj;
@@ -92,11 +92,7 @@ function createEmptyStats(){
 function saveStats(s){ localStorage.setItem(STATS_KEY, JSON.stringify(s)); logStatsToConsole(); updateDebugBadge(); }
 let tradeStats = loadStats();
 
-/* ================= CONFIG =================
-  Uses your gold logic; BTC & USOIL copy gold-style with pair specific zones/tolerance.
-  Replace TwelveData API key if you have another one.
-  MODIFIED: added min/max trades and early-entry tolerance settings
-*/
+/* ================= CONFIG ================= */
 const CONFIG = {
   XAUUSD: {
     tv: "OANDA:XAUUSD",
@@ -117,11 +113,10 @@ const CONFIG = {
     tps: {tp1:5,tp2:10,tp3:15},
     slGap:4,
     digits:2,
-    // new
     minTradesPerDay: 1,
     maxTradesPerDay: 3,
     maxTradesPerSession: 1,
-    earlyEntryPips: 7, // gold in pips-ish units
+    earlyEntryPips: 7,
     earlyEntryPercent: 0.15
   },
   BTCUSD: {
@@ -131,7 +126,6 @@ const CONFIG = {
       const data = await res.json();
       return parseFloat(data.price);
     },
-    // example pivots; you can tune these in future
     pivot: 65000,
     bias: 60000,
     tolerance: 20,
@@ -146,17 +140,15 @@ const CONFIG = {
     tps: {tp1:100,tp2:200,tp3:300},
     slGap:80,
     digits:2,
-    // new
     minTradesPerDay: 1,
     maxTradesPerDay: 3,
     maxTradesPerSession: 1,
-    earlyEntryPips: 150, // BTC: use pips/units
+    earlyEntryPips: 150,
     earlyEntryPercent: 0.20
   },
   USOIL: {
     tv: "TVC:USOIL",
     fetch: async () => {
-      // Try WTICOUSD or BRN/USD via TwelveData
       try {
         const r1 = await fetch("https://api.twelvedata.com/price?symbol=WTICOUSD&apikey=cd96961a49e242fe939a80866e70c57d");
         const d1 = await r1.json();
@@ -183,7 +175,6 @@ const CONFIG = {
     tps: {tp1:0.5,tp2:1.0,tp3:1.5},
     slGap:0.4,
     digits:2,
-    // new
     minTradesPerDay: 1,
     maxTradesPerDay: 3,
     maxTradesPerSession: 1,
@@ -223,25 +214,22 @@ function renderLevelsClickable(levels,digits=2){
   return `<div class="levels">LEVELS: ${levels.map(l => `<a onclick="tapLevel(${l})">${fmt(l,digits)}</a>`).join(" ")}</div>`;
 }
 function getISTDateString(d){
-  // returns YYYY-MM-DD in IST timezone
   const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
   const istOffset = 5.5 * 60 * 60 * 1000;
   const ist = new Date(utc + istOffset);
   return ist.toISOString().split('T')[0];
 }
 function getSessionName(date){
-  // date is JS Date (local). Convert to IST hour and choose session window.
   const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
   const istOffset = 5.5 * 60 * 60 * 1000;
   const ist = new Date(utc + istOffset);
   const h = ist.getHours();
-  // ASIA: 00:00 - 08:59, LONDON: 09:00 - 16:59, NEWYORK: 17:00 - 23:59
   if(h >= 0 && h <= 8) return "ASIA";
   if(h >= 9 && h <= 16) return "LONDON";
   return "NEWYORK";
 }
 
-/* ================= DEBUG & MIDNIGHT SUMMARY HELPERS (ADDED) ================= */
+/* ================= DEBUG & MIDNIGHT SUMMARY HELPERS ================= */
 function logStatsToConsole(){
   try{ console.log("[TS-ANGEL] tradeStats:", JSON.stringify(tradeStats)); }catch(e){}
 }
@@ -251,12 +239,10 @@ function updateDebugBadge(){
   const asia = s.perSession.ASIA||0, lon = s.perSession.LONDON||0, ny = s.perSession.NEWYORK||0;
   debugBadge.innerHTML = `DATE: ${today}<br>TOTAL: ${s.total}<br>ASIA:${asia} LONDON:${lon} NY:${ny}`;
 }
-/* persist daily summary (last 7 days) */
 function loadSummaries(){ try{ const raw = localStorage.getItem(SUMMARY_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
 function saveSummaryObject(obj){
   const arr = loadSummaries();
-  arr.unshift(obj); // newest first
-  // keep last 7 days
+  arr.unshift(obj);
   const trimmed = arr.slice(0,7);
   localStorage.setItem(SUMMARY_KEY, JSON.stringify(trimmed));
 }
@@ -265,23 +251,18 @@ function showMidnightToast(text){
   midnightToast.style.display = "block";
   setTimeout(()=>{ midnightToast.style.display = "none"; }, 12_000);
 }
-/* schedule IST-midnight job */
 function scheduleMidnightJob(){
-  // compute ms until next IST midnight
   const now = new Date();
-  // convert to IST time value
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istNow = new Date(utc + istOffset);
-  // next midnight IST
   const nextMid = new Date(istNow);
-  nextMid.setHours(24,0,5,0); // 00:00:05 next day IST (small 5s buffer)
+  nextMid.setHours(24,0,5,0);
   const msUntil = nextMid.getTime() - istNow.getTime();
   setTimeout(()=>{ runMidnightSummary(); setInterval(runMidnightSummary, 24*60*60*1000); }, msUntil);
 }
 function runMidnightSummary(){
   try{
-    // tradeStats may belong to previous day; create summary from it
     const s = tradeStats;
     const summary = {
       date: s.date || getISTDateString(new Date(Date.now() + 5.5*3600000)),
@@ -289,26 +270,34 @@ function runMidnightSummary(){
       perSession: s.perSession || {ASIA:0,LONDON:0,NEWYORK:0},
       perPair: s.perPair || {}
     };
-    // save and show
     saveSummaryObject(summary);
     const msg = `MIDNIGHT SUMMARY — ${summary.date}\nTOTAL: ${summary.total} | ASIA:${summary.perSession.ASIA||0} LONDON:${summary.perSession.LONDON||0} NEWYORK:${summary.perSession.NEWYORK||0}`;
     renderSignalUpper(msg);
     speak(`Aajker report. Total trades ${summary.total}. Asia ${summary.perSession.ASIA||0}, London ${summary.perSession.LONDON||0}, New York ${summary.perSession.NEWYORK||0}`);
     showMidnightToast(msg.replace(/\n/g,"<br>"));
-    // reset tradeStats for new day
     tradeStats = createEmptyStats();
     saveStats(tradeStats);
   }catch(e){ console.error("Midnight summary error",e); }
 }
 
+/* ================= ACTIVE TRADE PERSIST (MODIFIED) ================= */
+function saveActive(){ localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeSignal)); }
+function loadActive(){
+  try{
+    const raw = localStorage.getItem(ACTIVE_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    return obj && obj.status && obj.pair ? obj : null;
+  }catch(e){ return null; }
+}
+function clearActive(){ localStorage.removeItem(ACTIVE_KEY); }
+
 /* ================= MANUAL TAP ================= */
 async function tapLevel(level){
-  // MODIFIED: session/daily checks before allowing manual tap
   if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
   const pair = pairSelect.value;
   const cfg  = CONFIG[pair];
   const session = getSessionName(new Date());
-  // session/day counters
   if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
     renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`); speak("Session limit reached");
     return;
@@ -328,11 +317,12 @@ async function tapLevel(level){
   const sl  = direction==="BUY" ? fmt(level-cfg.slGap,cfg.digits) : fmt(level+cfg.slGap,cfg.digits);
   const time= new Date().toLocaleTimeString("en-IN",{hour12:true});
   activeSignal = {pair,direction,entry,tp1,tp2,tp3,sl,time,mode:"MANUAL-TAP",status:"RUNNING"};
-  // update counters
   tradeStats.total += 1;
   tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
   tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
-  saveStats(tradeStats); // persist
+  saveStats(tradeStats);
+  saveActive(); /* MODIFIED */
+
   const txt =
 `📊 ${pair}: ${direction}
 ⚙️ MODE: MANUAL-TAP
@@ -350,7 +340,7 @@ async function fetchLivePrice(pair){
   try{ return await CONFIG[pair].fetch(); } catch(e){ renderSignalUpper("❌ ERROR FETCHING LIVE PRICE!"); console.error(e); return null; }
 }
 
-/* ================= GET SETUP (gold-style) ================= */
+/* ================= GET SETUP ================= */
 function getSetup(pair,price){
   const cfg = CONFIG[pair];
   const momentumSell = price < cfg.pivot;
@@ -368,17 +358,14 @@ function getSetup(pair,price){
 
 /* ================= MANUAL GENERATE BUTTON ================= */
 async function generateSignal(){
-  // MODIFIED: added daily/session checks + soft/early-entry fallback
   const now = new Date();
   const pair = pairSelect.value;
   const day  = now.getDay();
   const time = now.toLocaleTimeString("en-IN",{hour12:true});
 
-  // gold weekend check (original)
   if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); speak("Gold market is closed today"); return; }
   if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
 
-  // enforce daily reset if needed
   if(tradeStats.date !== getISTDateString(new Date())) {
     tradeStats = createEmptyStats();
     saveStats(tradeStats);
@@ -387,7 +374,6 @@ async function generateSignal(){
   const session = getSessionName(new Date());
   const cfg = CONFIG[pair];
 
-  // session/day limits
   if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
     renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`);
     speak("Session limit reached");
@@ -403,37 +389,28 @@ async function generateSignal(){
   if(!price) return;
   const s = getSetup(pair,price);
 
-  // if in zone -> normal execution
   if(s.inZone){
     executeAndRecordAutoOrManual(pair, s, price, "INTRADAY");
     return;
   }
 
-  // NOT in zone: check early-entry tolerance (softening)
   let allowEarly = false;
   let earlyReason = "";
-  // compute distance
   const nearest = s.nearest ?? price;
   const diff = Math.abs(price - nearest);
-  // For FX (USOIL, XAU) use earlyEntryPips; for BTC use percent or pips depending on config values
   if(cfg.earlyEntryPips && diff <= cfg.earlyEntryPips){
-    allowEarly = true;
-    earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
+    allowEarly = true; earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
   } else if(cfg.earlyEntryPercent){
     const pct = (diff/price)*100;
     if(pct <= cfg.earlyEntryPercent){
-      allowEarly = true;
-      earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
+      allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
     }
   }
-
-  // Fallback: if daily trades < minTradesPerDay, be more lenient and allow early entry up to 2x tolerance
   if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
     const extendedTol = (cfg.earlyEntryPips || (price*cfg.earlyEntryPercent/100)) * 2;
     const diff2 = Math.abs(price - nearest);
     if(diff2 <= extendedTol){
-      allowEarly = true;
-      earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
+      allowEarly = true; earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
     }
   }
 
@@ -448,31 +425,22 @@ ${renderLevelsClickable(s.entryZones, CONFIG[pair].digits)}`;
     return;
   }
 
-  // Early entry accepted — craft EARLY / REDUCED-RISK signal
   const earlyEntryObj = Object.assign({}, s);
-  // mark entry as current nearest (but note reduced risk in message)
   earlyEntryObj.entry = fmt(s.nearest ?? price, cfg.digits);
   executeAndRecordAutoOrManual(pair, earlyEntryObj, price, "EARLY (REDUCED RISK)", earlyReason);
 }
 
 /* ================= EXECUTION & RECORDING (shared) ================= */
-// MODIFIED: centralize execution and update counters
 function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", extraNote=""){
-  if(activeSignal) return; // safety
+  if(activeSignal) return;
   const cfg = CONFIG[pair];
   const session = getSessionName(new Date());
-  // final safety checks for limits
   if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) {
-    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`);
-    speak("Session limit reached");
-    return;
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`); speak("Session limit reached"); return;
   }
   if(tradeStats.total >= cfg.maxTradesPerDay) {
-    renderSignalUpper("🚫 DAILY MAX TRADES REACHED.");
-    speak("Daily maximum trades reached");
-    return;
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED."); speak("Daily maximum trades reached"); return;
   }
-
   const time = new Date().toLocaleTimeString("en-IN",{hour12:true});
   activeSignal = {
     pair,
@@ -488,13 +456,12 @@ function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", ex
     note: extraNote
   };
 
-  // update counters and persist
   tradeStats.total += 1;
   tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
   tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
   saveStats(tradeStats);
+  saveActive(); /* MODIFIED */
 
-  // message formatting: include extra note for EARLY
   const noteLine = extraNote ? `\nNOTE: ${extraNote}` : "";
   const execText = `📊 ${pair}: ${setupObj.direction}
 ⚙️ MODE: ${mode}
@@ -504,7 +471,6 @@ function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", ex
 📍 LIVE PRICE: ${fmt(livePrice, CONFIG[pair].digits)}
 📈 TRADE IS LIVE...${noteLine}`;
   renderSignalUpper(execText);
-  // voice: keep it concise
   speak(`${pair} ${setupObj.direction}. Entry ${setupObj.entry}. TP1 ${setupObj.tp1}, SL ${setupObj.sl}`);
 }
 
@@ -513,25 +479,16 @@ const MONITOR_EVERY_MS = 60_000;
 const AUTO_DELAY_MS = 10 * 60_000;
 
 async function autoMonitorTick(){
-  // MODIFIED: added session/daily checks before pending/execution; uses same early-entry fallback logic as manual
   if(activeSignal) return;
   const pair = pairSelect.value;
   const day = new Date().getDay();
   if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); return; }
-  // reset daily stats if date changed
   if(tradeStats.date !== getISTDateString(new Date())){ tradeStats = createEmptyStats(); saveStats(tradeStats); }
 
   const cfg = CONFIG[pair];
   const session = getSessionName(new Date());
-  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) {
-    // nothing to do this session
-    updateDebugBadge();
-    return;
-  }
-  if(tradeStats.total >= cfg.maxTradesPerDay) {
-    updateDebugBadge();
-    return;
-  }
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { updateDebugBadge(); return; }
+  if(tradeStats.total >= cfg.maxTradesPerDay) { updateDebugBadge(); return; }
 
   let price = null;
   try{ price = await fetchLivePrice(pair); } catch(e){}
@@ -563,7 +520,6 @@ DETECTED AT: ${nowStr}`;
 
   pendingTimer = setTimeout(async ()=>{
     if(activeSignal) return;
-    // re-check counters (maybe user hit limits meanwhile)
     if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { pendingTimer = null; updateDebugBadge(); return; }
     if(tradeStats.total >= cfg.maxTradesPerDay) { pendingTimer = null; updateDebugBadge(); return; }
 
@@ -574,7 +530,6 @@ DETECTED AT: ${nowStr}`;
     if(re.inZone){
       executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO");
     } else {
-      // If not in zone after 10min, see if early-entry fallback should apply (same logic as generateSignal)
       const nearest = re.nearest ?? rePrice;
       const diff = Math.abs(rePrice - nearest);
       let allowEarly = false;
@@ -585,8 +540,7 @@ DETECTED AT: ${nowStr}`;
         const pct = (diff/rePrice)*100;
         if(pct <= cfg.earlyEntryPercent){
           allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
-        }
-      }
+s}      }
       if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
         const extendedTol = (cfg.earlyEntryPips || (rePrice*cfg.earlyEntryPercent/100)) * 2;
         const diff2 = Math.abs(rePrice - nearest);
@@ -632,13 +586,9 @@ handleModeChange();
 function resetSignal(){
   if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
   activeSignal = null;
-  // optionally reset counters (left as-is): keep daily counters; if you want to clear counts too, uncomment next lines
-  // tradeStats = createEmptyStats();
-  // saveStats(tradeStats);
+  clearActive(); /* MODIFIED */
   renderSignalUpper("🔄 RESET DONE. WAITING FOR SIGNAL...");
-  speak("Reset done");
-  updateDebugBadge();
-}
+  speak("Reset done");}
 
 /* ================= STARFIELD ================= */
 const canvas = document.getElementById("starfield");
@@ -667,12 +617,101 @@ setInterval(()=>{
   timeDisplay.innerText = ("⏰ CURRENT INDIAN TIME: " + now.toLocaleTimeString("en-IN")).toUpperCase();
 },1000);
 
-/* ================= INIT ================= */
-// initial badge render & console log
-updateDebugBadge();
-logStatsToConsole();
-// schedule midnight summary (IST)
+/* ================= ACTIVE TRADE PRICE MONITOR (MODIFIED) ================= */
+const ACTIVE_TRADE_POLL_MS = 15_000; // 15s
+let activePollId = null;
+
+function startActivePoll(){
+  if(activePollId) clearInterval(activePollId);
+  activePollId = setInterval(checkActiveTrade, ACTIVE_TRADE_POLL_MS);
+  checkActiveTrade(); // immediate
+}
+
+async function checkActiveTrade(){
+  if(!activeSignal) return;
+  const pair = activeSignal.pair;
+  const cfg  = CONFIG[pair];
+  let price = null;
+  try{ price = await fetchLivePrice(pair); }catch(e){}
+  if(price===null) return;
+
+  // parse numeric thresholds
+  const dir = activeSignal.direction;
+  const tp1 = Number(activeSignal.tp1), tp2 = Number(activeSignal.tp2), tp3 = Number(activeSignal.tp3);
+  updateDebugBadge();
+          const sl  = Number(activeSignal.sl);
+
+  // hit logic: close on FIRST hit (TP3 > TP2 > TP1 priority for BUY; inverse for SELL via same checks)
+  let hit = null, hitLevel = null;
+  if(dir === "BUY"){
+    if(price <= sl){ hit = "SL"; hitLevel = sl; }
+    else if(price >= tp3){ hit = "TP3"; hitLevel = tp3; }
+    else if(price >= tp2){ hit = "TP2"; hitLevel = tp2; }
+    else if(price >= tp1){ hit = "TP1"; hitLevel = tp1; }
+  } else { // SELL
+    if(price >= sl){ hit = "SL"; hitLevel = sl; }
+    else if(price <= tp3){ hit = "TP3"; hitLevel = tp3; }
+    else if(price <= tp2){ hit = "TP2"; hitLevel = tp2; }
+    else if(price <= tp1){ hit = "TP1"; hitLevel = tp1; }
+  }
+
+  if(hit){
+    // announce + close + unlock
+    const closedAt = new Date().toLocaleTimeString("en-IN",{hour12:true});
+    const summary = `✅ TRADE CLOSED — ${pair} ${dir}
+RESULT: ${hit} @ ${fmt(hitLevel,cfg.digits)}
+ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
+TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
+TIME: ${closedAt}
+📍 LIVE: ${fmt(price,cfg.digits)} — UNLOCKED FOR NEXT SIGNAL`;
+    renderSignalUpper(summary);
+    if(hit==="SL"){ speak(`${pair} stop loss hit. Trade closed.`); }
+    else { speak(`${pair} ${hit} hit. Trade closed.`); }
+
+    // mark and clear
+    activeSignal.status = `CLOSED_${hit}`;
+    saveActive(); // store final state briefly
+    // small delay then unlock (keep last result on screen)
+    setTimeout(()=>{
+      activeSignal = null;
+      clearActive();
+    }, 1500);
+  } else {
+    // still running — keep showing live price line (writes on chart box)
+    const runningView =
+`📊 ${pair}: ${dir} — RUNNING
+ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
+TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
+LIVE: ${fmt(price,cfg.digits)} • MODE: ${activeSignal.mode}`;
+    renderSignalUpper(runningView);
+  }logStatsToConsole();
 scheduleMidnightJob();
+
+/* MODIFIED: restore active trade on refresh */
+(function restoreOnLoad(){
+  const saved = loadActive();
+  if(saved){
+    activeSignal = saved;
+    // force pair dropdown to that pair (optional; but we keep current selection unchanged)
+    const cfg = CONFIG[activeSignal.pair];
+    const liveLine =
+`📊 ${activeSignal.pair}: ${activeSignal.direction}
+⚙️ MODE: ${activeSignal.mode}
+🟡 ENTRY: ${activeSignal.entry}
+🎯 TP1: ${activeSignal.tp1} | TP2: ${activeSignal.tp2} | TP3: ${activeSignal.tp3}
+🛑 SL: ${activeSignal.sl}
+⏱️ RESUMED AFTER REFRESH — TRADE LOCK ACTIVE`;
+    renderSignalUpper(liveLine);
+    speak("Active trade restored. Monitoring continues.");
+  }
+  startActivePoll(); // start/continue monitoring loop
+})();
 </script>
 </body>
 </html>
+ 
+}
+
+/* ================= INIT ================= */
+updateDebugBadge();
+  
