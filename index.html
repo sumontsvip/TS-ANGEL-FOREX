@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TS Angel Forex AI TEST VERSION — Full</title>
+  <title>TS Angel Forex AI — Full</title>
   <style>
     html,body{margin:0;padding:0;overflow-x:hidden;font-family:Arial,sans-serif;background:black;color:white;text-transform:uppercase}
     canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1}
@@ -26,7 +26,7 @@
 </head>
 <body>
   <canvas id="starfield"></canvas>
-  <h1>🚀 TS ANGEL FOREX AI TEST VERSION</h1>
+  <h1>🚀 TS ANGEL FOREX AI (BTC • GOLD • USOIL)</h1>
   <p id="timeDisplay">⏰ CURRENT INDIAN TIME:</p>
 
   <div class="bar">
@@ -441,6 +441,7 @@ function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", ex
   if(tradeStats.total >= cfg.maxTradesPerDay) {
     renderSignalUpper("🚫 DAILY MAX TRADES REACHED."); speak("Daily maximum trades reached"); return;
   }
+
   const time = new Date().toLocaleTimeString("en-IN",{hour12:true});
   activeSignal = {
     pair,
@@ -474,244 +475,4 @@ function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", ex
   speak(`${pair} ${setupObj.direction}. Entry ${setupObj.entry}. TP1 ${setupObj.tp1}, SL ${setupObj.sl}`);
 }
 
-/* ================= AUTO MONITOR (1MIN) + 10MIN CONFIRM ================= */
-const MONITOR_EVERY_MS = 60_000;
-const AUTO_DELAY_MS = 10 * 60_000;
-
-async function autoMonitorTick(){
-  if(activeSignal) return;
-  const pair = pairSelect.value;
-  const day = new Date().getDay();
-  if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); return; }
-  if(tradeStats.date !== getISTDateString(new Date())){ tradeStats = createEmptyStats(); saveStats(tradeStats); }
-
-  const cfg = CONFIG[pair];
-  const session = getSessionName(new Date());
-  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { updateDebugBadge(); return; }
-  if(tradeStats.total >= cfg.maxTradesPerDay) { updateDebugBadge(); return; }
-
-  let price = null;
-  try{ price = await fetchLivePrice(pair); } catch(e){}
-  if(!price) return;
-  const s = getSetup(pair,price);
-  const baseHeader = `🛰️ AUTO MONITORING ACTIVE — PAIR: ${pair} — PRICE: ${fmt(price, CONFIG[pair].digits)}`;
-
-  if(!s.inZone){
-    const view = `${baseHeader}
-NO VALID SETUP NEAR ZONES.
-${renderLevelsClickable(s.entryZones, CONFIG[pair].digits)}`;
-    signalBox.innerHTML = view.toUpperCase().replace(/\n/g,"<br>");
-    updateDebugBadge();
-    return;
-  }
-
-  const nowStr = new Date().toLocaleTimeString("en-IN",{hour12:true});
-  const pendingText = `${baseHeader}
-FOUND SETUP NEAR LEVEL — MARKED AS PENDING
-DIRECTION: ${s.direction}
-PLANNED ENTRY: ${s.entry}
-SL: ${s.sl} | TP1: ${s.tp1} | TP2: ${s.tp2} | TP3: ${s.tp3}
-WILL AUTO-EXECUTE IN 10 MINUTES IF STILL VALID
-DETECTED AT: ${nowStr}`;
-  renderSignalUpper(pendingText);
-  speak("Potential setup found. Will execute in ten minutes if still valid.");
-
-  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
-
-  pendingTimer = setTimeout(async ()=>{
-    if(activeSignal) return;
-    if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { pendingTimer = null; updateDebugBadge(); return; }
-    if(tradeStats.total >= cfg.maxTradesPerDay) { pendingTimer = null; updateDebugBadge(); return; }
-
-    let rePrice = null;
-    try{ rePrice = await fetchLivePrice(pair); } catch(e){}
-    if(!rePrice) return;
-    const re = getSetup(pair,rePrice);
-    if(re.inZone){
-      executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO");
-    } else {
-      const nearest = re.nearest ?? rePrice;
-      const diff = Math.abs(rePrice - nearest);
-      let allowEarly = false;
-      let earlyReason = "";
-      if(cfg.earlyEntryPips && diff <= cfg.earlyEntryPips){
-        allowEarly = true; earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
-      } else if(cfg.earlyEntryPercent){
-        const pct = (diff/rePrice)*100;
-        if(pct <= cfg.earlyEntryPercent){
-          allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
-s}      }
-      if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
-        const extendedTol = (cfg.earlyEntryPips || (rePrice*cfg.earlyEntryPercent/100)) * 2;
-        const diff2 = Math.abs(rePrice - nearest);
-        if(diff2 <= extendedTol){
-          allowEarly = true; earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
-        }
-      }
-
-      if(allowEarly){
-        executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO-EARLY", earlyReason);
-      } else {
-        const cancelText = `${baseHeader}
-SETUP INVALID AFTER 10 MINUTES — AUTO EXECUTION CANCELLED
-${renderLevelsClickable(re.entryZones, CONFIG[pair].digits)}`;
-        signalBox.innerHTML = cancelText.toUpperCase().replace(/\n/g,"<br>");
-        speak("Setup cancelled after recheck.");
-      }
-    }
-    pendingTimer = null;
-    updateDebugBadge();
-  }, AUTO_DELAY_MS);
-
-  updateDebugBadge();
-}
-
-/* ================= MODE SWITCH ================= */
-modeSelect.addEventListener("change", handleModeChange);
-function handleModeChange(){
-  const mode = modeSelect.value;
-  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
-  if(autoMonitorId){ clearInterval(autoMonitorId); autoMonitorId = null; }
-  if(mode === "AUTO"){
-    renderSignalUpper("🛰️ AUTO MODE ON — MONITORING LIVE PRICE...");
-    autoMonitorId = setInterval(autoMonitorTick, MONITOR_EVERY_MS);
-    autoMonitorTick();
-  } else {
-    renderSignalUpper("🖐️ MANUAL MODE — TAP A LEVEL OR PRESS GENERATE SIGNAL");
-  }
-}
-handleModeChange();
-
-/* ================= RESET ================= */
-function resetSignal(){
-  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
-  activeSignal = null;
-  clearActive(); /* MODIFIED */
-  renderSignalUpper("🔄 RESET DONE. WAITING FOR SIGNAL...");
-  speak("Reset done");}
-
-/* ================= STARFIELD ================= */
-const canvas = document.getElementById("starfield");
-const ctx = canvas.getContext("2d");
-let stars = [];
-function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-resizeCanvas();
-for(let i=0;i<200;i++){ stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,size:Math.random()*2,speed:Math.random()*1}) }
-function animateStars(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#00ffe7";
-  stars.forEach(star=>{
-    star.y += star.speed;
-    if(star.y>canvas.height) star.y = 0;
-    ctx.beginPath();
-    ctx.arc(star.x,star.y,star.size,0,2*Math.PI);
-    ctx.fill();
-  });
-  requestAnimationFrame(animateStars);
-}
-animateStars();
-
-/* ================= CLOCK ================= */
-setInterval(()=>{
-  const now = new Date();
-  timeDisplay.innerText = ("⏰ CURRENT INDIAN TIME: " + now.toLocaleTimeString("en-IN")).toUpperCase();
-},1000);
-
-/* ================= ACTIVE TRADE PRICE MONITOR (MODIFIED) ================= */
-const ACTIVE_TRADE_POLL_MS = 15_000; // 15s
-let activePollId = null;
-
-function startActivePoll(){
-  if(activePollId) clearInterval(activePollId);
-  activePollId = setInterval(checkActiveTrade, ACTIVE_TRADE_POLL_MS);
-  checkActiveTrade(); // immediate
-}
-
-async function checkActiveTrade(){
-  if(!activeSignal) return;
-  const pair = activeSignal.pair;
-  const cfg  = CONFIG[pair];
-  let price = null;
-  try{ price = await fetchLivePrice(pair); }catch(e){}
-  if(price===null) return;
-
-  // parse numeric thresholds
-  const dir = activeSignal.direction;
-  const tp1 = Number(activeSignal.tp1), tp2 = Number(activeSignal.tp2), tp3 = Number(activeSignal.tp3);
-  updateDebugBadge();
-          const sl  = Number(activeSignal.sl);
-
-  // hit logic: close on FIRST hit (TP3 > TP2 > TP1 priority for BUY; inverse for SELL via same checks)
-  let hit = null, hitLevel = null;
-  if(dir === "BUY"){
-    if(price <= sl){ hit = "SL"; hitLevel = sl; }
-    else if(price >= tp3){ hit = "TP3"; hitLevel = tp3; }
-    else if(price >= tp2){ hit = "TP2"; hitLevel = tp2; }
-    else if(price >= tp1){ hit = "TP1"; hitLevel = tp1; }
-  } else { // SELL
-    if(price >= sl){ hit = "SL"; hitLevel = sl; }
-    else if(price <= tp3){ hit = "TP3"; hitLevel = tp3; }
-    else if(price <= tp2){ hit = "TP2"; hitLevel = tp2; }
-    else if(price <= tp1){ hit = "TP1"; hitLevel = tp1; }
-  }
-
-  if(hit){
-    // announce + close + unlock
-    const closedAt = new Date().toLocaleTimeString("en-IN",{hour12:true});
-    const summary = `✅ TRADE CLOSED — ${pair} ${dir}
-RESULT: ${hit} @ ${fmt(hitLevel,cfg.digits)}
-ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
-TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
-TIME: ${closedAt}
-📍 LIVE: ${fmt(price,cfg.digits)} — UNLOCKED FOR NEXT SIGNAL`;
-    renderSignalUpper(summary);
-    if(hit==="SL"){ speak(`${pair} stop loss hit. Trade closed.`); }
-    else { speak(`${pair} ${hit} hit. Trade closed.`); }
-
-    // mark and clear
-    activeSignal.status = `CLOSED_${hit}`;
-    saveActive(); // store final state briefly
-    // small delay then unlock (keep last result on screen)
-    setTimeout(()=>{
-      activeSignal = null;
-      clearActive();
-    }, 1500);
-  } else {
-    // still running — keep showing live price line (writes on chart box)
-    const runningView =
-`📊 ${pair}: ${dir} — RUNNING
-ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
-TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
-LIVE: ${fmt(price,cfg.digits)} • MODE: ${activeSignal.mode}`;
-    renderSignalUpper(runningView);
-  }logStatsToConsole();
-scheduleMidnightJob();
-
-/* MODIFIED: restore active trade on refresh */
-(function restoreOnLoad(){
-  const saved = loadActive();
-  if(saved){
-    activeSignal = saved;
-    // force pair dropdown to that pair (optional; but we keep current selection unchanged)
-    const cfg = CONFIG[activeSignal.pair];
-    const liveLine =
-`📊 ${activeSignal.pair}: ${activeSignal.direction}
-⚙️ MODE: ${activeSignal.mode}
-🟡 ENTRY: ${activeSignal.entry}
-🎯 TP1: ${activeSignal.tp1} | TP2: ${activeSignal.tp2} | TP3: ${activeSignal.tp3}
-🛑 SL: ${activeSignal.sl}
-⏱️ RESUMED AFTER REFRESH — TRADE LOCK ACTIVE`;
-    renderSignalUpper(liveLine);
-    speak("Active trade restored. Monitoring continues.");
-  }
-  startActivePoll(); // start/continue monitoring loop
-})();
-</script>
-</body>
-</html>
- 
-}
-
-/* ================= INIT ================= */
-updateDebugBadge();
-  
+/* ================= AUTO MONI
