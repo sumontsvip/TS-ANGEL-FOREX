@@ -1,121 +1,462 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TS Angel Forex AI Test Version</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TS Angel Gold Master — Live</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: black;
-      color: #0ff;
-      text-align: center;
-      overflow-x: hidden;
-    }
-    header {
-      padding: 10px;
-      background: black;
-      font-size: 20px;
-      font-weight: bold;
-      color: cyan;
-      text-shadow: 0 0 10px cyan;
-    }
-    .subheader {
-      font-size: 14px;
-      margin-bottom: 5px;
-      color: lime;
-    }
-    .buttons {
-      margin: 15px 0;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      cursor: pointer;
-      background: black;
-      color: cyan;
-      border: 1px solid cyan;
-      text-shadow: 0 0 5px cyan;
-      transition: all 0.3s;
-    }
-    button:hover {
-      background: cyan;
-      color: black;
-    }
-    .signal-box {
-      margin: 10px auto;
-      padding: 10px;
-      border: 1px solid cyan;
-      width: 80%;
-      border-radius: 10px;
-      font-size: 14px;
-      color: #0ff;
-    }
-    footer {
-      margin-top: 20px;
-      font-size: 12px;
-      color: cyan;
-      text-shadow: 0 0 5px cyan;
-    }
-    /* background stars effect */
-    .stars {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: black url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
-      z-index: -1;
-    }
+    html,body{margin:0;padding:0;overflow-x:hidden;font-family:Arial,sans-serif;background:black;color:white;text-transform:uppercase}
+    canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1}
+    body{text-align:center;padding:20px}
+    h1{color:#00ffe7;animation:neon-flicker 1.5s infinite}
+    #timeDisplay{font-size:1.1rem;color:#ffcc00;animation:neon-flicker 2s infinite}
+    select,button{padding:12px 20px;margin:10px;font-size:1rem;border-radius:6px;background:#111;color:#00ffea;border:2px solid #00ffea;cursor:pointer;animation:glow-pulse 2s infinite}
+    button:hover{background:#00ffea;color:black}
+    iframe{width:100%;height:500px;border:none;margin-top:25px;border-radius:10px;box-shadow:0 0 20px #00ffe7;animation:glow-pulse 3s infinite}
+    .signal-box{margin-top:25px;background:#111;padding:20px;border-radius:10px;font-size:1.05rem;color:#ffcc00;animation:glow-pulse 1.5s infinite;white-space:pre-line;line-height:1.4}
+    .watermark{margin-top:40px;font-size:1.1rem;color:#00ffe7;animation:neon-flicker 2s infinite}
+    @keyframes neon-flicker{0%,100%{text-shadow:0 0 5px #0ff,0 0 10px #0ff,0 0 20px #0ff}50%{text-shadow:0 0 2px #0ff,0 0 5px #0ff}}
+    @keyframes glow-pulse{0%,100%{box-shadow:0 0 10px #00ffe7,0 0 20px #00ffe7}50%{box-shadow:0 0 5px #00ffe7,0 0 10px #00ffe7}}
+    .bar{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+    #debugBadge{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.6);border:1px solid #00ffea;color:#00ffea;padding:8px 10px;border-radius:8px;font-size:0.85rem;z-index:9999;text-align:left;min-width:170px}
+    #midnightToast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#111;padding:12px 18px;border-radius:8px;border:1px solid #00ffe7;color:#ffcc00;z-index:9999;display:none}
+    .levels a{color:#00ffea;text-decoration:underline;cursor:pointer;margin:0 6px;display:inline-block}
   </style>
 </head>
 <body>
-  <div class="stars"></div>
-  <header>🚀 TS ANGEL FOREX AI TEST VERSION</header>
-  <div class="subheader">🌐 CURRENT INDIAN TIME: <span id="time"></span></div>
+  <canvas id="starfield"></canvas>
+  <h1>🚀 TS ANGEL GOLD MASTER STRATEGY</h1>
+  <p id="timeDisplay">⏰ CURRENT INDIAN TIME:</p>
 
-  <div class="buttons">
-    <select id="pair">
-      <option value="XAUUSD">XAUUSD</option>
-      <option value="EURUSD">EURUSD</option>
-      <option value="GBPUSD">GBPUSD</option>
+  <div class="bar">
+    <!-- ONLY GOLD -->
+    <select id="pairSelect" title="PAIR">
+      <option value="XAUUSD" selected>XAUUSD</option>
     </select>
-    <button onclick="manual()">MANUAL</button>
-    <button onclick="generateSignal()">⚡ GENERATE SIGNAL</button>
-    <button onclick="reset()">RESET</button>
+
+    <select id="modeSelect" title="MODE">
+      <option value="MANUAL" selected>MANUAL</option>
+      <option value="AUTO">AUTO</option>
+    </select>
+
+    <button id="onBtn">🔴 ANGEL ON</button>
+    <button id="offBtn">⚫ ANGEL OFF</button>
+
+    <button onclick="playClick(); generateSignal()">📡 GENERATE SIGNAL</button>
+    <button onclick="playClick(); resetSignal()">♻️ RESET</button>
   </div>
 
-  <div class="signal-box" id="signal">PAIR CHANGED. WAITING FOR SIGNAL...</div>
+  <div class="signal-box" id="signalBox">🔍 WAITING FOR GOLD STRATEGY SIGNAL...</div>
+  <iframe id="tvChart"></iframe>
+  <div class="watermark">💡 CREATED BY TRADER SUMON</div>
 
-  <!-- TradingView Chart Embed -->
-  <div style="height:500px;width:90%;margin:auto;">
-    <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart"
-      width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
-  </div>
+  <audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3"></audio>
+  <div id="debugBadge">LOADING STATS...</div>
+  <div id="midnightToast"></div>
 
-  <footer>💡 CREATED BY TRADER SUMON</footer>
+<script>
+/* ================= CONFIG (only XAUUSD) ================= */
+const CONFIG = {
+  XAUUSD: {
+    tv: "OANDA:XAUUSD",
+    // public price API (twelvedata) — key appears in earlier parts, keep limited use
+    fetch: async () => {
+      try {
+        const res = await fetch("https://api.twelvedata.com/price?symbol=XAU/USD&apikey=cd96961a49e242fe939a80866e70c57d");
+        const data = await res.json();
+        return parseFloat(data.price);
+      } catch(e){
+        // fallback: return null
+        return null;
+      }
+    },
+    pivot: 3377.28,
+    bias: 3350.50,
+    tolerance: 0.5,
+    zones: (price) => {
+      // sample zones tuned for Gold — you'll update these with your real OB/FVG zones
+      const momentumSell = price < 3377.28;
+      const levelsSell = [3372,3370,3365,3360,3356,3351];
+      const levelsBuy  = [3381,3385,3389,3394];
+      return momentumSell ? levelsSell : levelsBuy;
+    },
+    tps: {tp1:5,tp2:10,tp3:15}, // in price units (for Gold small numbers)
+    slGap:4,
+    digits:2,
+    minTradesPerDay: 1,
+    maxTradesPerDay: 2,
+    maxTradesPerSession: 1,
+    earlyEntryPips: 7,
+    earlyEntryPercent: 0.15
+  }
+};
 
-  <script>
-    function updateTime() {
-      const now = new Date();
-      document.getElementById("time").innerText = now.toLocaleTimeString("en-IN");
-    }
-    setInterval(updateTime, 1000);
-    updateTime();
+/* ================= DOM ================= */
+const pairSelect   = document.getElementById("pairSelect");
+const modeSelect   = document.getElementById("modeSelect");
+const tvChart      = document.getElementById("tvChart");
+const signalBox    = document.getElementById("signalBox");
+const timeDisplay  = document.getElementById("timeDisplay");
+const clickSound   = document.getElementById("clickSound");
+const debugBadge   = document.getElementById("debugBadge");
+const midnightToast= document.getElementById("midnightToast");
+const onBtn        = document.getElementById("onBtn");
+const offBtn       = document.getElementById("offBtn");
 
-    function manual() {
-      document.getElementById("signal").innerText = "Manual mode activated!";
+/* ================= STATE ================= */
+let activeSignal   = null;
+let pendingTimer   = null;
+let autoMonitorId  = null;
+let autoIsOn       = false;
+const ACTIVE_KEY   = "ts_angel_active_trade_v1";
+const STATS_KEY    = "ts_angel_trade_stats_v1";
+const SUMMARY_KEY  = "ts_angel_daily_summaries_v1";
+
+/* ================= STATS HELPERS ================= */
+function getISTDateString(d){
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(utc + istOffset);
+  return ist.toISOString().split('T')[0];
+}
+function createEmptyStats(){
+  const today = getISTDateString(new Date());
+  return { date: today, total: 0, perSession: { ASIA:0, LONDON:0, NEWYORK:0 }, perPair: {} };
+}
+function loadStats(){
+  try{
+    const raw = localStorage.getItem(STATS_KEY);
+    if(!raw) return createEmptyStats();
+    const obj = JSON.parse(raw);
+    const today = getISTDateString(new Date());
+    if(obj.date !== today) return createEmptyStats();
+    return obj;
+  }catch(e){ return createEmptyStats(); }
+}
+function saveStats(s){ localStorage.setItem(STATS_KEY, JSON.stringify(s)); updateDebugBadge(); }
+let tradeStats = loadStats();
+
+/* ================= ACTIVE PERSISTENCE ================= */
+function saveActive(){ try{ localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeSignal)); }catch(e){} }
+function loadActive(){ try{ const raw = localStorage.getItem(ACTIVE_KEY); if(!raw) return null; const obj = JSON.parse(raw); return obj && obj.status ? obj : null; }catch(e){ return null; } }
+function clearActive(){ try{ localStorage.removeItem(ACTIVE_KEY); }catch(e){} }
+
+/* ================= UTIL HELPERS ================= */
+function fmt(n,d=2){ return Number(n).toFixed(d) }
+function near(a,b,tol){ return Math.abs(a-b) <= tol }
+function playClick(){ try{ clickSound.play(); }catch(e){} }
+
+/* ================= TTS / Speak ================= */
+function speak(text){
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'bn-IN';
+    const voices = speechSynthesis.getVoices();
+    const fv = voices.find(x=>x.lang && x.lang.toLowerCase().includes('bn'));
+    if(fv) u.voice = fv;
+    u.rate = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){
+    console.error("TTS error", e);
+  }
+}
+
+/* ================= CHART LOAD ================= */
+pairSelect.addEventListener("change", () => { loadChart(); renderSignalUpper("🔄 PAIR CHANGED. WAITING FOR SIGNAL..."); });
+function loadChart(){
+  const pair = pairSelect.value;
+  const tv = CONFIG[pair].tv;
+  tvChart.src = `https://s.tradingview.com/widgetembed/?frameElementId=tvChart&symbol=${encodeURIComponent(tv)}&interval=5&theme=dark&style=1&timezone=Asia/Kolkata&withdateranges=1&studies=[]&toolbarbg=rgba(0,0,0,1)&hide_side_toolbar=0&allow_symbol_change=0&saveimage=1&details=1&hotlist=1&calendar=1`;
+}
+loadChart();
+
+/* ================= RENDER / UI ================= */
+function renderSignalUpper(text){ signalBox.innerHTML = String(text).toUpperCase().replace(/\n/g,"<br>"); }
+function renderLevelsClickable(levels,digits=2){
+  if(!levels||!levels.length) return "";
+  return `<div class="levels">LEVELS: ${levels.map(l => `<a onclick="tapLevel(${l})">${fmt(l,digits)}</a>`).join(" ")}</div>`;
+}
+function updateDebugBadge(){
+  const s = tradeStats || createEmptyStats();
+  const today = s.date || getISTDateString(new Date());
+  const total = s.total || 0;
+  const asia = s.perSession.ASIA || 0, lon = s.perSession.LONDON || 0, ny = s.perSession.NEWYORK || 0;
+  debugBadge.innerHTML = `DATE: ${today}<br>TOTAL: ${total}<br>ASIA:${asia} LONDON:${lon} NY:${ny}`;
+}
+function showMidnightToast(text){
+  midnightToast.innerHTML = text;
+  midnightToast.style.display = "block";
+  setTimeout(()=>{ midnightToast.style.display = "none"; }, 12_000);
+}
+
+/* ================= SESSIONS ================= */
+function getSessionName(date){
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(utc + istOffset);
+  const h = ist.getHours();
+  if(h >= 0 && h <= 8) return "ASIA";
+  if(h >= 9 && h <= 16) return "LONDON";
+  return "NEWYORK";
+}
+
+/* ================= GET SETUP (zone detection) ================= */
+function getSetup(pair,price){
+  const cfg = CONFIG[pair];
+  const momentumSell = price < cfg.pivot;
+  const direction = momentumSell ? "SELL" : "BUY";
+  const entryZones = cfg.zones(price) || [];
+  // check nearest zone within tolerance
+  const nearest = entryZones.slice().sort((a,b)=>Math.abs(price-a)-Math.abs(price-b))[0];
+  const inZone = nearest !== undefined && Math.abs(price - nearest) <= cfg.tolerance;
+  const entry = fmt(nearest ?? price, cfg.digits);
+  const tp1 = direction==="BUY" ? fmt(Number(entry) + cfg.tps.tp1, cfg.digits) : fmt(Number(entry) - cfg.tps.tp1, cfg.digits);
+  const tp2 = direction==="BUY" ? fmt(Number(entry) + cfg.tps.tp2, cfg.digits) : fmt(Number(entry) - cfg.tps.tp2, cfg.digits);
+  const tp3 = direction==="BUY" ? fmt(Number(entry) + cfg.tps.tp3, cfg.digits) : fmt(Number(entry) - cfg.tps.tp3, cfg.digits);
+  const sl  = direction==="BUY" ? fmt(Number(entry) - cfg.slGap, cfg.digits) : fmt(Number(entry) + cfg.slGap, cfg.digits);
+  return { direction, entryZones, inZone, entry, tp1, tp2, tp3, sl, nearest };
+}
+
+/* ================= FETCH LIVE PRICE ================= */
+async function fetchLivePrice(pair){
+  try{ return await CONFIG[pair].fetch(); } catch(e){ console.error("price fetch err", e); return null; }
+}
+
+/* ================= EXECUTION & RECORDING ================= */
+function executeAndRecordAutoOrManual(pair, setupObj, livePrice, mode="AUTO", extraNote=""){
+  if(activeSignal) return;
+  const cfg = CONFIG[pair];
+  const session = getSessionName(new Date());
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) {
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`); speak("Session limit reached"); return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay) {
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED."); speak("Daily maximum trades reached"); return;
+  }
+
+  const time = new Date().toLocaleTimeString("en-IN",{hour12:true});
+  // Set entry equal to livePrice when price equals zone — user asked exact price execution
+  const entryPrice = (Number(setupObj.entry) === Number(livePrice.toFixed(CONFIG[pair].digits))) ? fmt(livePrice, CONFIG[pair].digits) : setupObj.entry;
+
+  activeSignal = {
+    pair,
+    direction: setupObj.direction,
+    entry: entryPrice,
+    tp1: setupObj.tp1,
+    tp2: setupObj.tp2,
+    tp3: setupObj.tp3,
+    sl: setupObj.sl,
+    time,
+    mode,
+    status: "RUNNING",
+    note: extraNote
+  };
+
+  tradeStats.total += 1;
+  tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
+  tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
+  saveStats(tradeStats);
+  saveActive();
+
+  const noteLine = extraNote ? `\nNOTE: ${extraNote}` : "";
+  const execText = `📊 ${pair}: ${setupObj.direction}
+⚙️ MODE: ${mode}
+🟡 ENTRY: ${activeSignal.entry}
+🎯 TP1: ${setupObj.tp1} | TP2: ${setupObj.tp2} | TP3: ${setupObj.tp3}
+🛑 SL: ${setupObj.sl}
+📍 LIVE PRICE: ${fmt(livePrice, CONFIG[pair].digits)}
+📈 TRADE IS LIVE...${noteLine}`;
+  renderSignalUpper(execText);
+  speak(`${pair} ${setupObj.direction}. Entry ${activeSignal.entry}. TP1 ${setupObj.tp1}, SL ${setupObj.sl}`);
+}
+
+/* ================= TAP LEVEL (manual click on level) ================= */
+async function tapLevel(level){
+  if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
+  const pair = pairSelect.value;
+  const cfg  = CONFIG[pair];
+  const session = getSessionName(new Date());
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`); speak("Session limit reached");
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay){
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED."); speak("Daily maximum trades reached");
+    return;
+  }
+
+  let price = await fetchLivePrice(pair);
+  if(price === null){ renderSignalUpper("❌ ERROR FETCHING LIVE PRICE!"); return; }
+  const direction = (price < cfg.pivot) ? "SELL" : "BUY";
+  const entry = fmt(level,cfg.digits);
+  const tp1 = direction==="BUY" ? fmt(level+cfg.tps.tp1,cfg.digits) : fmt(level-cfg.tps.tp1,cfg.digits);
+  const tp2 = direction==="BUY" ? fmt(level+cfg.tps.tp2,cfg.digits) : fmt(level-cfg.tps.tp2,cfg.digits);
+  const tp3 = direction==="BUY" ? fmt(level+cfg.tps.tp3,cfg.digits) : fmt(level-cfg.tps.tp3,cfg.digits);
+  const sl  = direction==="BUY" ? fmt(level-cfg.slGap,cfg.digits) : fmt(level+cfg.slGap,cfg.digits);
+  const time= new Date().toLocaleTimeString("en-IN",{hour12:true});
+  activeSignal = {pair,direction,entry,tp1,tp2,tp3,sl,time,mode:"MANUAL-TAP",status:"RUNNING"};
+  tradeStats.total += 1;
+  tradeStats.perSession[session] = (tradeStats.perSession[session]||0)+1;
+  tradeStats.perPair[pair] = (tradeStats.perPair[pair]||0)+1;
+  saveStats(tradeStats);
+  saveActive();
+
+  const txt =
+`📊 ${pair}: ${direction}
+⚙️ MODE: MANUAL-TAP
+🟡 ENTRY: ${entry}
+🎯 TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}
+🛑 SL: ${sl}
+📍 LIVE PRICE: ${fmt(price,CONFIG[pair].digits)}
+📈 TRADE IS LIVE...`;
+  renderSignalUpper(txt);
+  speak(`${pair} ${direction}. Entry ${entry}. TP1 ${tp1}, TP2 ${tp2}, SL ${sl}`);
+}
+
+/* ================= MANUAL GENERATE BUTTON ================= */
+async function generateSignal(){
+  const now = new Date();
+  const pair = pairSelect.value;
+  const day  = now.getDay();
+  const time = now.toLocaleTimeString("en-IN",{hour12:true});
+
+  // Gold weekend check (Saturday=6, Sunday=0)
+  if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); speak("Gold market is closed today"); return; }
+  if(activeSignal){ renderSignalUpper("⏳ WAIT: A SIGNAL IS ALREADY ACTIVE!"); speak("Wait, a signal is already active"); return; }
+
+  if(tradeStats.date !== getISTDateString(new Date())) {
+    tradeStats = createEmptyStats();
+    saveStats(tradeStats);
+  }
+
+  const session = getSessionName(new Date());
+  const cfg = CONFIG[pair];
+
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession){
+    renderSignalUpper(`🚫 SESSION LIMIT REACHED FOR ${session}.`);
+    speak("Session limit reached");
+    return;
+  }
+  if(tradeStats.total >= cfg.maxTradesPerDay){
+    renderSignalUpper("🚫 DAILY MAX TRADES REACHED.");
+    speak("Daily maximum trades reached");
+    return;
+  }
+
+  const price = await fetchLivePrice(pair);
+  if(!price){ renderSignalUpper("❌ ERROR FETCHING LIVE PRICE!"); return; }
+  const s = getSetup(pair,price);
+
+  if(s.inZone){
+    // immediate execute at same price (user wanted exact)
+    executeAndRecordAutoOrManual(pair, s, price, "INTRADAY");
+    return;
+  }
+
+  // early tolerance logic
+  let allowEarly = false;
+  let earlyReason = "";
+  const nearest = s.nearest ?? price;
+  const diff = Math.abs(price - nearest);
+  if(CONFIG[pair].earlyEntryPips && diff <= CONFIG[pair].earlyEntryPips){
+    allowEarly = true; earlyReason = `PRICE ${fmt(diff,CONFIG[pair].digits)} AWAY (PIPS TOLERANCE)`;
+  } else if(CONFIG[pair].earlyEntryPercent){
+    const pct = (diff/price)*100;
+    if(pct <= CONFIG[pair].earlyEntryPercent){
+      allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
     }
-    function generateSignal() {
-      document.getElementById("signal").innerText = "Signal generated for " + document.getElementById("pair").value;
+  }
+  if(!allowEarly && tradeStats.total < CONFIG[pair].minTradesPerDay){
+    const extendedTol = (CONFIG[pair].earlyEntryPips || (price*CONFIG[pair].earlyEntryPercent/100)) * 2;
+    const diff2 = Math.abs(price - nearest);
+    if(diff2 <= extendedTol){
+      allowEarly = true; earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,CONFIG[pair].digits)}`;
     }
-    function reset() {
-      document.getElementById("signal").innerText = "PAIR CHANGED. WAITING FOR SIGNAL...";
-    }
-  </script>
-</body>
-</html>
+  }
+
+  if(!allowEarly){
+    const msg =
+`❌ NO VALID TRADE SETUP NOW.
+PRICE NOT NEAR ANY KEY ZONE.
+CURRENT: ${fmt(price, CONFIG[pair].digits)}
+${renderLevelsClickable(s.entryZones, CONFIG[pair].digits)}`;
+    renderSignalUpper(msg);
+    speak("No trade now. Price not near level zone.");
+    return;
+  }
+
+  const earlyEntryObj = Object.assign({}, s);
+  earlyEntryObj.entry = fmt(s.nearest ?? price, CONFIG[pair].digits);
+  executeAndRecordAutoOrManual(pair, earlyEntryObj, price, "EARLY (REDUCED RISK)", earlyReason);
+}
+
+/* ================= AUTO MONITOR (1MIN) + 10MIN CONFIRM ================= */
+const MONITOR_EVERY_MS = 60_000;
+const AUTO_DELAY_MS = 10 * 60_000;
+
+async function autoMonitorTick(){
+  if(activeSignal) return;
+  const pair = pairSelect.value;
+  const day = new Date().getDay();
+  if((pair==="XAUUSD") && (day===6||day===0)){ renderSignalUpper("⚠️ GOLD MARKET IS CLOSED TODAY."); return; }
+  if(tradeStats.date !== getISTDateString(new Date())){ tradeStats = createEmptyStats(); saveStats(tradeStats); }
+
+  const cfg = CONFIG[pair];
+  const session = getSessionName(new Date());
+  if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { updateDebugBadge(); return; }
+  if(tradeStats.total >= cfg.maxTradesPerDay) { updateDebugBadge(); return; }
+
+  let price = null;
+  try{ price = await fetchLivePrice(pair); } catch(e){}
+  if(!price) return;
+  const s = getSetup(pair,price);
+  const baseHeader = `🛰️ AUTO MONITORING ACTIVE — PAIR: ${pair} — PRICE: ${fmt(price, CONFIG[pair].digits)}`;
+
+  if(!s.inZone){
+    const view = `${baseHeader}
+NO VALID SETUP NEAR ZONES.
+${renderLevelsClickable(s.entryZones, CONFIG[pair].digits)}`;
+    renderSignalUpper(view);
+    updateDebugBadge();
+    return;
+  }
+
+  const nowStr = new Date().toLocaleTimeString("en-IN",{hour12:true});
+  const pendingText = `${baseHeader}
+FOUND SETUP NEAR LEVEL — MARKED AS PENDING
+DIRECTION: ${s.direction}
+PLANNED ENTRY: ${s.entry}
+SL: ${s.sl} | TP1: ${s.tp1} | TP2: ${s.tp2} | TP3: ${s.tp3}
+WILL AUTO-EXECUTE IN 10 MINUTES IF STILL VALID
+DETECTED AT: ${nowStr}`;
+  renderSignalUpper(pendingText);
+  speak("Potential setup found. Will execute in ten minutes if still valid.");
+
+  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
+
+  pendingTimer = setTimeout(async ()=>{
+    if(activeSignal) return;
+    if(tradeStats.perSession[session] >= cfg.maxTradesPerSession) { pendingTimer = null; updateDebugBadge(); return; }
+    if(tradeStats.total >= cfg.maxTradesPerDay) { pendingTimer = null; updateDebugBadge(); return; }
+
+    let rePrice = null;
+    try{ rePrice = await fetchLivePrice(pair); } catch(e){}
+    if(!rePrice) return;
+    const re = getSetup(pair,rePrice);
+    if(re.inZone){
+      executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO");
+    } else {
+      const nearest = re.nearest ?? rePrice;
+      const diff = Math.abs(rePrice - nearest);
+      let allowEarly = false;
+      let earlyReason = "";
+      if(cfg.earlyEntryPips && diff <= cfg.earlyEntryPips){
+        allowEarly = true; earlyReason = `PRICE ${fmt(diff,cfg.digits)} AWAY (PIPS TOLERANCE)`;
+      } else if(cfg.earlyEntryPercent){
+        const pct = (diff/rePrice)*100;
+        if(pct <= cfg.earlyEntryPercent){
+          allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
+        }
+      }
+      if(!allo
