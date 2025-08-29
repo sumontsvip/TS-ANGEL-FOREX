@@ -459,4 +459,220 @@ DETECTED AT: ${nowStr}`;
           allowEarly = true; earlyReason = `PRICE ${fmt(pct,3)}% AWAY (PCT TOLERANCE)`;
         }
       }
-      if(!allo
+      if(!allowEarly && tradeStats.total < cfg.minTradesPerDay){
+        const extendedTol = (cfg.earlyEntryPips || (rePrice*cfg.earlyEntryPercent/100)) * 2;
+        const diff2 = Math.abs(rePrice - nearest);
+        if(diff2 <= extendedTol){
+          allowEarly = true; earlyReason = `FALLBACK MIN-TRADE MODE — EXTENDED TOLERANCE ${fmt(extendedTol,cfg.digits)}`;
+        }
+      }
+
+      if(allowEarly){
+        executeAndRecordAutoOrManual(pair, re, rePrice, "AUTO-EARLY", earlyReason);
+      } else {
+        const cancelText = `${baseHeader}
+SETUP INVALID AFTER 10 MINUTES — AUTO EXECUTION CANCELLED
+${renderLevelsClickable(re.entryZones, CONFIG[pair].digits)}`;
+        signalBox.innerHTML = cancelText.toUpperCase().replace(/\n/g,"<br>");
+        speak("Setup cancelled after recheck.");
+      }
+    }
+    pendingTimer = null;
+    updateDebugBadge();
+  }, AUTO_DELAY_MS);
+
+  updateDebugBadge();
+}
+
+/* ================= MODE SWITCH ================= */
+modeSelect.addEventListener("change", handleModeChange);
+function handleModeChange(){
+  const mode = modeSelect.value;
+  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
+  if(autoMonitorId){ clearInterval(autoMonitorId); autoMonitorId = null; }
+  if(mode === "AUTO"){
+    renderSignalUpper("🛰️ AUTO MODE ON — MONITORING LIVE PRICE...");
+    autoMonitorId = setInterval(autoMonitorTick, MONITOR_EVERY_MS);
+    autoMonitorTick(); // immediate check
+  } else {
+    renderSignalUpper("🖐️ MANUAL MODE — TAP A LEVEL OR PRESS GENERATE SIGNAL");
+  }
+}
+
+/* ================= RESET ================= */
+function resetSignal(){
+  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
+  activeSignal = null;
+  clearActive();
+  renderSignalUpper("🔄 RESET DONE. WAITING FOR SIGNAL...");
+  speak("Reset done");
+  updateDebugBadge();
+}
+
+/* ================= STARFIELD ================= */
+const canvas = document.getElementById("starfield");
+const ctx = canvas.getContext("2d");
+let stars = [];
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+for(let i=0;i<200;i++){ stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,size:Math.random()*2,speed:Math.random()*1}) }
+function animateStars(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#00ffe7";
+  stars.forEach(star=>{
+    star.y += star.speed;
+    if(star.y>canvas.height) star.y = 0;
+    ctx.beginPath();
+    ctx.arc(star.x,star.y,star.size,0,2*Math.PI);
+    ctx.fill();
+  });
+  requestAnimationFrame(animateStars);
+}
+animateStars();
+
+/* ================= CLOCK ================= */
+setInterval(()=>{
+  const now = new Date();
+  timeDisplay.innerText = ("⏰ CURRENT INDIAN TIME: " + now.toLocaleTimeString("en-IN")).toUpperCase();
+},1000);
+
+/* ================= ACTIVE TRADE PRICE MONITOR (MODIFIED) ================= */
+const ACTIVE_TRADE_POLL_MS = 15_000; // 15s
+let activePollId = null;
+
+function startActivePoll(){
+  if(activePollId) clearInterval(activePollId);
+  activePollId = setInterval(checkActiveTrade, ACTIVE_TRADE_POLL_MS);
+  checkActiveTrade(); // immediate
+}
+
+async function checkActiveTrade(){
+  if(!activeSignal) return;
+  const pair = activeSignal.pair;
+  const cfg  = CONFIG[pair];
+  let price = null;
+  try{ price = await fetchLivePrice(pair); }catch(e){}
+  if(price===null) return;
+
+  const dir = activeSignal.direction;
+  const tp1 = Number(activeSignal.tp1), tp2 = Number(activeSignal.tp2), tp3 = Number(activeSignal.tp3);
+  const sl  = Number(activeSignal.sl);
+
+  let hit = null, hitLevel = null;
+  if(dir === "BUY"){
+    if(price <= sl){ hit = "SL"; hitLevel = sl; }
+    else if(price >= tp3){ hit = "TP3"; hitLevel = tp3; }
+    else if(price >= tp2){ hit = "TP2"; hitLevel = tp2; }
+    else if(price >= tp1){ hit = "TP1"; hitLevel = tp1; }
+  } else {
+    if(price >= sl){ hit = "SL"; hitLevel = sl; }
+    else if(price <= tp3){ hit = "TP3"; hitLevel = tp3; }
+    else if(price <= tp2){ hit = "TP2"; hitLevel = tp2; }
+    else if(price <= tp1){ hit = "TP1"; hitLevel = tp1; }
+  }
+
+  if(hit){
+    const closedAt = new Date().toLocaleTimeString("en-IN",{hour12:true});
+    const summary = `✅ TRADE CLOSED — ${pair} ${dir}
+RESULT: ${hit} @ ${fmt(hitLevel,cfg.digits)}
+ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
+TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
+TIME: ${closedAt}
+📍 LIVE: ${fmt(price,cfg.digits)} — UNLOCKED FOR NEXT SIGNAL`;
+    renderSignalUpper(summary);
+    if(hit==="SL"){ speak(`${pair} stop loss hit. Trade closed.`); }
+    else { speak(`${pair} ${hit} hit. Trade closed.`); }
+
+    activeSignal.status = `CLOSED_${hit}`;
+    saveActive();
+    setTimeout(()=>{
+      activeSignal = null;
+      clearActive();
+    }, 1500);
+  } else {
+    const runningView =
+`📊 ${pair}: ${dir} — RUNNING
+ENTRY: ${activeSignal.entry} | SL: ${activeSignal.sl}
+TP1:${activeSignal.tp1} TP2:${activeSignal.tp2} TP3:${activeSignal.tp3}
+LIVE: ${fmt(price,cfg.digits)} • MODE: ${activeSignal.mode}`;
+    renderSignalUpper(runningView);
+  }
+}
+
+/* ================= MIDNIGHT SUMMARY HELPERS ================= */
+function logStatsToConsole(){ try{ console.log("[TS-ANGEL] tradeStats:", JSON.stringify(tradeStats)); }catch(e){} }
+function loadSummaries(){ try{ const raw = localStorage.getItem(SUMMARY_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+function saveSummaryObject(obj){ const arr = loadSummaries(); arr.unshift(obj); const trimmed = arr.slice(0,7); localStorage.setItem(SUMMARY_KEY, JSON.stringify(trimmed)); }
+function scheduleMidnightJob(){
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istNow = new Date(utc + istOffset);
+  const nextMid = new Date(istNow);
+  nextMid.setHours(24,0,5,0);
+  const msUntil = nextMid.getTime() - istNow.getTime();
+  setTimeout(()=>{ runMidnightSummary(); setInterval(runMidnightSummary, 24*60*60*1000); }, msUntil);
+}
+function runMidnightSummary(){
+  try{
+    const s = tradeStats;
+    const summary = {
+      date: s.date || getISTDateString(new Date(Date.now() + 5.5*3600000)),
+      total: s.total || 0,
+      perSession: s.perSession || {ASIA:0,LONDON:0,NEWYORK:0},
+      perPair: s.perPair || {}
+    };
+    saveSummaryObject(summary);
+    const msg = `MIDNIGHT SUMMARY — ${summary.date}\nTOTAL: ${summary.total} | ASIA:${summary.perSession.ASIA||0} LONDON ${summary.perSession.LONDON||0} NEWYORK ${summary.perSession.NEWYORK||0}`;
+    renderSignalUpper(msg);
+    speak(`Aajker report. Total trades ${summary.total}. Asia ${summary.perSession.ASIA||0}, London ${summary.perSession.LONDON||0}, New York ${summary.perSession.NEWYORK||0}`);
+    showMidnightToast(msg.replace(/\n/g,"<br>"));
+    tradeStats = createEmptyStats();
+    saveStats(tradeStats);
+  }catch(e){ console.error("Midnight summary error",e); }
+}
+
+/* ================= INIT / RESTORE ================= */
+updateDebugBadge();
+logStatsToConsole();
+scheduleMidnightJob();
+
+/* restore active trade on load */
+(function restoreOnLoad(){
+  const saved = loadActive();
+  if(saved){
+    activeSignal = saved;
+    const liveLine =
+`📊 ${activeSignal.pair}: ${activeSignal.direction}
+⚙️ MODE: ${activeSignal.mode}
+🟡 ENTRY: ${activeSignal.entry}
+🎯 TP1: ${activeSignal.tp1} | TP2: ${activeSignal.tp2} | TP3: ${activeSignal.tp3}
+🛑 SL: ${activeSignal.sl}
+⏱️ RESUMED AFTER REFRESH — TRADE LOCK ACTIVE`;
+    renderSignalUpper(liveLine);
+    speak("Active trade restored. Monitoring continues.");
+  }
+  startActivePoll();
+})();
+
+/* ================= ON / OFF BUTTONS ================= */
+onBtn.addEventListener("click", ()=>{
+  if(autoIsOn){ renderSignalUpper("🟢 ANGEL ALREADY ON"); return; }
+  autoIsOn = true;
+  handleModeChange(); // set mode monitoring if AUTO
+  renderSignalUpper("🔴 ANGEL IS ON NOW — SUMON SIR");
+  speak("I'm ON now. Sumon Sir — TS Angel activated.");
+});
+offBtn.addEventListener("click", ()=>{
+  if(!autoIsOn){ renderSignalUpper("⚫ ANGEL ALREADY OFF"); return; }
+  autoIsOn = false;
+  if(autoMonitorId){ clearInterval(autoMonitorId); autoMonitorId = null; }
+  if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
+  renderSignalUpper("⚫ ANGEL IS OFF — PAUSED");
+  speak("Angel stopped.");
+});
+
+/* start clock and active poll already running above */
+</script>
+</body>
+</html>
